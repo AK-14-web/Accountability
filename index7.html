@@ -6,13 +6,24 @@
     <title>NEET PG Accountability Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --color-primary: #1e40af; /* Darker Blue */
+            --color-secondary: #f97316; /* Orange 500 */
+        }
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            font-family: 'Poppins', sans-serif;
+            background-color: #1a202c; /* Dark background */
         }
         .container {
-            max-width: 800px;
+            max-width: 900px;
+        }
+        .card {
+            background-color: #2d3748; /* Darker card background */
+            color: #e2e8f0; /* Light text */
         }
         .message-box {
             position: fixed;
@@ -27,7 +38,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center py-10 px-4">
+<body class="min-h-screen flex flex-col items-center py-10 px-4">
 
     <!-- Firebase SDKs -->
     <script type="module">
@@ -44,7 +55,7 @@
         const messageBox = document.getElementById('message-box');
         const showMessage = (message, type = 'info') => {
             messageBox.textContent = message;
-            messageBox.className = `message-box p-4 rounded-lg shadow-lg text-white ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+            messageBox.className = `message-box p-4 rounded-xl shadow-lg text-white ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
             messageBox.style.display = 'block';
             setTimeout(() => {
                 messageBox.style.display = 'none';
@@ -127,12 +138,10 @@
             const userId = auth.currentUser.uid;
 
             const hours = document.getElementById('hours-input').value;
-            const topics = document.getElementById('topics-input').value;
             const name = document.getElementById('name-input').value;
             const mcqs = document.getElementById('mcqs-input').value;
-            const exercise = document.getElementById('exercise-input').value;
 
-            if (hours === '' || topics === '' || name === '' || mcqs === '' || exercise === '') {
+            if (hours === '' || name === '' || mcqs === '') {
                 showMessage('Please fill in all fields.', 'error');
                 return;
             }
@@ -152,9 +161,7 @@
                 userId: userId,
                 name: normalizedName,
                 hours: parseFloat(hours),
-                topics: topics,
                 mcqs: parseInt(mcqs),
-                exercise: exercise,
                 date: serverTimestamp(),
                 timestamp: new Date().toISOString()
             };
@@ -165,9 +172,7 @@
             try {
                 await addDoc(studyLogsRef, studyData);
                 document.getElementById('hours-input').value = '';
-                document.getElementById('topics-input').value = '';
                 document.getElementById('mcqs-input').value = '';
-                document.getElementById('exercise-input').value = '';
                 showMessage('Study logged successfully!', 'success');
             } catch (e) {
                 console.error("Error adding document: ", e);
@@ -333,17 +338,47 @@
                     plugins: {
                         legend: {
                             display: true,
-                            position: 'top'
+                            position: 'top',
+                            labels: {
+                                color: '#e2e8f0', /* Light text for legend */
+                            }
                         },
                         tooltip: {
                             mode: 'index',
                             intersect: false
-                        }
+                        },
                     }
                 }
             });
         };
 
+        const generateContent = async (prompt) => {
+            const resultBox = document.getElementById('gemini-result-box');
+            resultBox.textContent = 'Generating...';
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                console.error('API Error:', response.status, response.statusText);
+                resultBox.textContent = 'Error generating content. Please try again.';
+                return;
+            }
+
+            const result = await response.json();
+            const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+            resultBox.textContent = generatedText || 'No content generated.';
+        };
+        
         window.logStudy = logStudy;
         window.toggleView = (viewType) => {
             const formView = document.getElementById('form-view');
@@ -355,48 +390,89 @@
             const dailyBtn = document.getElementById('daily-progress-btn');
             const weeklyBtn = document.getElementById('weekly-progress-btn');
             const monthlyBtn = document.getElementById('monthly-progress-btn');
+            const geminiView = document.getElementById('gemini-view');
+            const motivationBtn = document.getElementById('motivation-btn');
+            const studyTipBtn = document.getElementById('study-tip-btn');
 
             if (viewType === 'log') {
                 formView.classList.remove('hidden');
                 progressView.classList.add('hidden');
+                geminiView.classList.add('hidden');
                 logBtn.classList.add('bg-blue-600', 'text-white');
                 dailyBtn.classList.remove('bg-blue-600', 'text-white');
-                dailyBtn.classList.add('bg-gray-400', 'text-white');
+                dailyBtn.classList.add('bg-gray-600', 'text-white');
                 weeklyBtn.classList.remove('bg-blue-600', 'text-white');
-                weeklyBtn.classList.add('bg-gray-400', 'text-white');
+                weeklyBtn.classList.add('bg-gray-600', 'text-white');
                 monthlyBtn.classList.remove('bg-blue-600', 'text-white');
-                monthlyBtn.classList.add('bg-gray-400', 'text-white');
+                monthlyBtn.classList.add('bg-gray-600', 'text-white');
+                motivationBtn.classList.remove('bg-blue-600', 'text-white');
+                motivationBtn.classList.add('bg-gray-600', 'text-white');
+                studyTipBtn.classList.remove('bg-blue-600', 'text-white');
+                studyTipBtn.classList.add('bg-gray-600', 'text-white');
+
+            } else if (viewType === 'motivation' || viewType === 'studytip') {
+                formView.classList.add('hidden');
+                progressView.classList.add('hidden');
+                geminiView.classList.remove('hidden');
+                logBtn.classList.remove('bg-blue-600');
+                logBtn.classList.add('bg-gray-600');
+                
+                dailyBtn.classList.remove('bg-blue-600', 'text-white');
+                dailyBtn.classList.add('bg-gray-600', 'text-white');
+                weeklyBtn.classList.remove('bg-blue-600', 'text-white');
+                weeklyBtn.classList.add('bg-gray-600', 'text-white');
+                monthlyBtn.classList.remove('bg-blue-600', 'text-white');
+                monthlyBtn.classList.add('bg-gray-600', 'text-white');
+                
+                if (viewType === 'motivation') {
+                    const prompt = "Generate a concise and powerful motivational quote for a medical student studying for a postgraduate exam.";
+                    generateContent(prompt);
+                    motivationBtn.classList.add('bg-blue-600', 'text-white');
+                    studyTipBtn.classList.remove('bg-blue-600', 'text-white');
+                    studyTipBtn.classList.add('bg-gray-600', 'text-white');
+                } else {
+                    const prompt = "Provide a single, effective study strategy or tip for someone preparing for a difficult medical entrance exam like NEET PG. Focus on a practical, actionable tip.";
+                    generateContent(prompt);
+                    studyTipBtn.classList.add('bg-blue-600', 'text-white');
+                    motivationBtn.classList.remove('bg-blue-600', 'text-white');
+                    motivationBtn.classList.add('bg-gray-600', 'text-white');
+                }
             } else {
                 formView.classList.add('hidden');
                 progressView.classList.remove('hidden');
+                geminiView.classList.add('hidden');
                 logBtn.classList.remove('bg-blue-600');
-                logBtn.classList.add('bg-gray-400');
+                logBtn.classList.add('bg-gray-600');
                 
                 dailyChartContainer.classList.add('hidden');
                 weeklyChartContainer.classList.add('hidden');
                 monthlyChartContainer.classList.add('hidden');
+                motivationBtn.classList.remove('bg-blue-600', 'text-white');
+                motivationBtn.classList.add('bg-gray-600', 'text-white');
+                studyTipBtn.classList.remove('bg-blue-600', 'text-white');
+                studyTipBtn.classList.add('bg-gray-600', 'text-white');
 
                 if (viewType === 'daily') {
                     dailyChartContainer.classList.remove('hidden');
                     dailyBtn.classList.add('bg-blue-600', 'text-white');
                     weeklyBtn.classList.remove('bg-blue-600', 'text-white');
-                    weeklyBtn.classList.add('bg-gray-400', 'text-white');
+                    weeklyBtn.classList.add('bg-gray-600', 'text-white');
                     monthlyBtn.classList.remove('bg-blue-600', 'text-white');
-                    monthlyBtn.classList.add('bg-gray-400', 'text-white');
+                    monthlyBtn.classList.add('bg-gray-600', 'text-white');
                 } else if (viewType === 'weekly') {
                     weeklyChartContainer.classList.remove('hidden');
                     weeklyBtn.classList.add('bg-blue-600', 'text-white');
                     dailyBtn.classList.remove('bg-blue-600', 'text-white');
-                    dailyBtn.classList.add('bg-gray-400', 'text-white');
+                    dailyBtn.classList.add('bg-gray-600', 'text-white');
                     monthlyBtn.classList.remove('bg-blue-600', 'text-white');
-                    monthlyBtn.classList.add('bg-gray-400', 'text-white');
+                    monthlyBtn.classList.add('bg-gray-600', 'text-white');
                 } else if (viewType === 'monthly') {
                     monthlyChartContainer.classList.remove('hidden');
                     monthlyBtn.classList.add('bg-blue-600', 'text-white');
                     dailyBtn.classList.remove('bg-blue-600', 'text-white');
-                    dailyBtn.classList.add('bg-gray-400', 'text-white');
+                    dailyBtn.classList.add('bg-gray-600', 'text-white');
                     weeklyBtn.classList.remove('bg-blue-600', 'text-white');
-                    weeklyBtn.classList.add('bg-gray-400', 'text-white');
+                    weeklyBtn.classList.add('bg-gray-600', 'text-white');
                 }
             }
         };
@@ -404,75 +480,73 @@
 
     <div id="message-box" class="hidden"></div>
 
-    <div class="container bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center space-y-8">
-        <h1 class="text-3xl sm:text-4xl font-bold text-center text-gray-800">NEET PG Accountability</h1>
-        <p class="text-sm text-gray-500 text-center">User ID: <span id="user-id" class="font-mono text-xs">Initializing...</span></p>
+    <div class="container card p-8 rounded-2xl shadow-2xl flex flex-col items-center space-y-8 border border-gray-700">
+        <h1 class="text-3xl sm:text-4xl font-bold text-center text-white">NEET PG Accountability</h1>
+        <p class="text-sm text-gray-400 text-center">User ID: <span id="user-id" class="font-mono text-xs text-gray-200">Initializing...</span></p>
 
         <!-- Navigation Buttons -->
         <div class="flex flex-wrap justify-center gap-4 w-full">
-            <button id="log-btn" onclick="toggleView('log')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-blue-600 text-white shadow-lg">Log Study</button>
-            <button id="daily-progress-btn" onclick="toggleView('daily')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-400 text-white shadow-lg">Daily Progress</button>
-            <button id="weekly-progress-btn" onclick="toggleView('weekly')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-400 text-white shadow-lg">Weekly Progress</button>
-            <button id="monthly-progress-btn" onclick="toggleView('monthly')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-400 text-white shadow-lg">Monthly Progress</button>
+            <button id="log-btn" onclick="toggleView('log')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-blue-600 text-white shadow-lg hover:bg-blue-700">Log Study</button>
+            <button id="daily-progress-btn" onclick="toggleView('daily')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Daily</button>
+            <button id="weekly-progress-btn" onclick="toggleView('weekly')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Weekly</button>
+            <button id="monthly-progress-btn" onclick="toggleView('monthly')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Monthly</button>
+            <button id="motivation-btn" onclick="toggleView('motivation')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Motivation ✨</button>
+            <button id="study-tip-btn" onclick="toggleView('studytip')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Study Tip ✨</button>
         </div>
 
         <!-- Data Entry Form -->
         <div id="form-view" class="w-full space-y-6">
             <div class="space-y-2">
-                <label for="name-input" class="text-gray-700 font-medium">Your Name:</label>
-                <input type="text" id="name-input" placeholder="e.g., Friend A" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <label for="name-input" class="text-gray-200 font-medium">Your Name:</label>
+                <input type="text" id="name-input" placeholder="e.g., Friend A" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
             </div>
             <div class="space-y-2">
-                <label for="hours-input" class="text-gray-700 font-medium">Hours Studied:</label>
-                <input type="number" id="hours-input" placeholder="e.g., 6.5" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <label for="hours-input" class="text-gray-200 font-medium">Hours Studied:</label>
+                <input type="number" id="hours-input" placeholder="e.g., 6.5" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
             </div>
             <div class="space-y-2">
-                <label for="mcqs-input" class="text-gray-700 font-medium">MCQs Solved:</label>
-                <input type="number" id="mcqs-input" placeholder="e.g., 100" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div class="space-y-2">
-                <label for="exercise-input" class="text-gray-700 font-medium">Exercise:</label>
-                <input type="text" id="exercise-input" placeholder="e.g., 30 min run" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div class="space-y-2">
-                <label for="topics-input" class="text-gray-700 font-medium">Topics Covered:</label>
-                <textarea id="topics-input" rows="3" placeholder="e.g., Anatomy, Pathology" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                <label for="mcqs-input" class="text-gray-200 font-medium">MCQs Solved:</label>
+                <input type="number" id="mcqs-input" placeholder="e.g., 100" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
             </div>
             <button onclick="logStudy()" class="w-full py-4 px-6 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-colors">
                 Submit
             </button>
         </div>
+        
+        <!-- LLM Results View -->
+        <div id="gemini-view" class="w-full hidden card p-6 rounded-2xl shadow-inner border border-gray-700">
+            <h2 class="text-lg font-semibold text-white mb-2">Gemini Says:</h2>
+            <p id="gemini-result-box" class="text-gray-300 text-base leading-relaxed">Click a button above to generate some content!</p>
+        </div>
 
         <!-- Progress Graphs Container -->
         <div id="progress-view" class="w-full hidden flex flex-col items-center space-y-4">
-            <div id="loading" class="text-gray-500 text-center">Loading chart data...</div>
+            <div id="loading" class="text-gray-400 text-center">Loading chart data...</div>
 
             <!-- Daily Progress Chart -->
             <div id="daily-chart-container" class="w-full hidden">
-                <h2 id="daily-chart-title" class="text-2xl font-semibold text-gray-800 text-center mb-4">Daily Progress</h2>
-                <div class="chart-container">
+                <h2 id="daily-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Daily Progress</h2>
+                <div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
                     <canvas id="progressChartDaily"></canvas>
                 </div>
             </div>
 
             <!-- Weekly Progress Chart -->
             <div id="weekly-chart-container" class="w-full hidden">
-                <h2 id="weekly-chart-title" class="text-2xl font-semibold text-gray-800 text-center mb-4">Weekly Progress</h2>
-                <div class="chart-container">
+                <h2 id="weekly-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Weekly Progress</h2>
+                <div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
                     <canvas id="progressChartWeekly"></canvas>
                 </div>
             </div>
 
             <!-- Monthly Progress Chart -->
             <div id="monthly-chart-container" class="w-full hidden">
-                <h2 id="monthly-chart-title" class="text-2xl font-semibold text-gray-800 text-center mb-4">Monthly Progress</h2>
-                <div class="chart-container">
+                <h2 id="monthly-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Monthly Progress</h2>
+                <div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
                     <canvas id="progressChartMonthly"></canvas>
                 </div>
             </div>
         </div>
-
     </div>
 </body>
 </html>
-
