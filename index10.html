@@ -8,31 +8,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-:root {
-    --color-primary: #1e40af;
-}
-body {
-    font-family: 'Poppins', sans-serif;
-    background-color: #1a202c;
-}
-.container {
-    max-width: 900px;
-}
-.card {
-    background-color: #2d3748;
-    color: #e2e8f0;
-}
-.message-box {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 1000;
-}
-.chart-container {
-    position: relative;
-    height: 400px;
-    width: 100%;
-}
+body { font-family: 'Poppins', sans-serif; background-color: #1a202c; }
+.container { max-width: 900px; }
+.card { background-color: #2d3748; color: #e2e8f0; }
+.message-box { position: fixed; top: 20px; right: 20px; z-index: 1000; }
+.chart-container { position: relative; height: 400px; width: 100%; }
 </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -43,54 +23,39 @@ body {
 <h1 class="text-3xl sm:text-4xl font-bold text-center text-white">NEET PG Accountability</h1>
 <p class="text-sm text-gray-400 text-center">User ID: <span id="user-id" class="font-mono text-xs text-gray-200">Initializing...</span></p>
 
-<!-- Navigation Buttons -->
 <div class="flex flex-wrap justify-center gap-4 w-full">
-    <button id="log-btn" onclick="toggleView('log')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-blue-600 text-white shadow-lg hover:bg-blue-700">Log Study</button>
-    <button id="daily-progress-btn" onclick="toggleView('daily')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Daily</button>
-    <button id="weekly-progress-btn" onclick="toggleView('weekly')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Weekly</button>
-    <button id="monthly-progress-btn" onclick="toggleView('monthly')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Monthly</button>
+    <button id="log-btn" onclick="toggleView('log')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-blue-600 text-white">Log Study</button>
+    <button id="daily-progress-btn" onclick="toggleView('daily')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-gray-600 text-white">Daily</button>
+    <button id="weekly-progress-btn" onclick="toggleView('weekly')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-gray-600 text-white">Weekly</button>
+    <button id="monthly-progress-btn" onclick="toggleView('monthly')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-gray-600 text-white">Monthly</button>
 </div>
 
-<!-- Data Entry Form -->
 <div id="form-view" class="w-full space-y-6">
-    <div class="space-y-2">
-        <label for="name-input" class="text-gray-200 font-medium">Your Name:</label>
-        <input type="text" id="name-input" placeholder="e.g., Friend A" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
-    </div>
-    <div class="space-y-2">
-        <label for="hours-input" class="text-gray-200 font-medium">Hours Studied:</label>
-        <input type="number" id="hours-input" placeholder="e.g., 6.5" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
-    </div>
-    <div class="space-y-2">
-        <label for="mcqs-input" class="text-gray-200 font-medium">MCQs Solved:</label>
-        <input type="number" id="mcqs-input" placeholder="e.g., 100" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
-    </div>
-    <button onclick="logStudy()" class="w-full py-4 px-6 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-colors">Submit</button>
+    <input type="text" id="name-input" placeholder="Your Name" class="w-full p-3 rounded-lg border-2 border-gray-700 bg-gray-800 text-white">
+    <input type="number" id="hours-input" placeholder="Hours Studied" class="w-full p-3 rounded-lg border-2 border-gray-700 bg-gray-800 text-white">
+    <input type="number" id="mcqs-input" placeholder="MCQs Solved" class="w-full p-3 rounded-lg border-2 border-gray-700 bg-gray-800 text-white">
+    <button onclick="logStudy()" class="w-full py-4 rounded-xl bg-blue-600 text-white font-bold">Submit</button>
 </div>
 
-<!-- Progress Graphs Container -->
 <div id="progress-view" class="w-full hidden flex flex-col items-center space-y-4">
     <div id="loading" class="text-gray-400 text-center">Loading chart data...</div>
 
-    <!-- Daily Progress Chart -->
     <div id="daily-chart-container" class="w-full hidden">
-        <h2 id="daily-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Daily Progress</h2>
+        <h2 class="text-2xl font-semibold text-white text-center mb-4">Daily Progress</h2>
         <div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
             <canvas id="progressChartDaily"></canvas>
         </div>
     </div>
 
-    <!-- Weekly Progress Chart -->
     <div id="weekly-chart-container" class="w-full hidden">
-        <h2 id="weekly-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Weekly Progress</h2>
+        <h2 class="text-2xl font-semibold text-white text-center mb-4">Weekly Progress</h2>
         <div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
             <canvas id="progressChartWeekly"></canvas>
         </div>
     </div>
 
-    <!-- Monthly Progress Chart -->
     <div id="monthly-chart-container" class="w-full hidden">
-        <h2 id="monthly-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Monthly Progress</h2>
+        <h2 class="text-2xl font-semibold text-white text-center mb-4">Monthly Progress</h2>
         <div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
             <canvas id="progressChartMonthly"></canvas>
         </div>
@@ -115,156 +80,106 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 let unsubscribe = null;
+let dailyChart, weeklyChart, monthlyChart;
 
 const messageBox = document.getElementById('message-box');
-const showMessage = (msg, type='info') => {
-    messageBox.textContent = msg;
-    messageBox.className = `message-box p-4 rounded-xl shadow-lg text-white ${type==='success'?'bg-green-500':'bg-red-500'}`;
+const showMessage = (msg,type='info')=>{
+    messageBox.textContent=msg;
+    messageBox.className=`message-box p-4 rounded-xl shadow-lg text-white ${type==='success'?'bg-green-500':'bg-red-500'}`;
     messageBox.style.display='block';
     setTimeout(()=>messageBox.style.display='none',3000);
 };
 
-window.logStudy = async () => {
-    if(!auth.currentUser) {
-        await signInAnonymously(auth);
-        showMessage('Authenticating user, try again','info');
-        return;
-    }
-    const name = document.getElementById('name-input').value.trim().toLowerCase();
-    const hours = parseFloat(document.getElementById('hours-input').value);
-    const mcqs = parseInt(document.getElementById('mcqs-input').value);
-    if(!name || isNaN(hours) || isNaN(mcqs)){
-        showMessage('Please fill all fields correctly','error');
-        return;
-    }
-
-    try {
-        await addDoc(collection(db, "study_logs"), {
-            userId: auth.currentUser.uid,
-            name, hours, mcqs,
-            timestamp: serverTimestamp()
-        });
+window.logStudy = async ()=>{
+    if(!auth.currentUser){ await signInAnonymously(auth); showMessage('Authenticating, try again','info'); return; }
+    const name=document.getElementById('name-input').value.trim().toLowerCase();
+    const hours=parseFloat(document.getElementById('hours-input').value);
+    const mcqs=parseInt(document.getElementById('mcqs-input').value);
+    if(!name||isNaN(hours)||isNaN(mcqs)){ showMessage('Fill all fields correctly','error'); return; }
+    try{
+        await addDoc(collection(db,"study_logs"),{userId:auth.currentUser.uid,name,hours,mcqs,timestamp:serverTimestamp()});
         document.getElementById('name-input').value='';
         document.getElementById('hours-input').value='';
         document.getElementById('mcqs-input').value='';
-        showMessage('Study logged successfully!','success');
-    } catch(e){
-        console.error(e);
-        showMessage('Error logging study','error');
-    }
+        showMessage('Study logged!','success');
+    }catch(e){console.error(e); showMessage('Error logging study','error');}
 };
 
-const startRealtimeListener = () => {
+onAuthStateChanged(auth,user=>{
+    if(user){ document.getElementById('user-id').textContent=user.uid; startRealtimeListener(); }
+});
+
+const startRealtimeListener = ()=>{
     if(unsubscribe) unsubscribe();
-    unsubscribe = onSnapshot(collection(db, "study_logs"), snapshot => {
+    unsubscribe = onSnapshot(collection(db,"study_logs"),snapshot=>{
         const logs = snapshot.docs.map(doc=>{
             const data = doc.data();
-            if(data.timestamp?.toDate) data.timestamp = data.timestamp.toDate();
-            else data.timestamp = new Date();
+            data.timestamp = data.timestamp?.toDate ? data.timestamp.toDate() : new Date();
             return data;
         });
         updateCharts(logs);
     });
 };
 
-onAuthStateChanged(auth, user=>{
-    if(user){
-        document.getElementById('user-id').textContent = user.uid;
-        startRealtimeListener();
-    }
-});
-
-const updateCharts = (logs) => {
-    const now = new Date();
-    const todayISO = now.toISOString().slice(0,10);
-
-    const dailyData = {};
-    const weeklyData = {};
-    const monthlyData = {};
-
-    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+const updateCharts = logs=>{
+    const now=new Date();
+    const todayISO=now.toISOString().slice(0,10);
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate()-now.getDay());
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    logs.forEach(log=>{
-        const logDate = new Date(log.timestamp);
-        const logISO = logDate.toISOString().slice(0,10);
+    const daily={}, weekly={}, monthly={};
 
-        // Daily
-        if(logISO===todayISO){
-            if(!dailyData[log.name]) dailyData[log.name]={hours:0,mcqs:0};
-            dailyData[log.name].hours+=log.hours;
-            dailyData[log.name].mcqs+=log.mcqs;
-        }
-        // Weekly
-        if(logDate>=startOfWeek && logDate<=now){
-            if(!weeklyData[log.name]) weeklyData[log.name]={hours:0,mcqs:0};
-            weeklyData[log.name].hours+=log.hours;
-            weeklyData[log.name].mcqs+=log.mcqs;
-        }
-        // Monthly
-        if(logDate>=startOfMonth){
-            if(!monthlyData[log.name]) monthlyData[log.name]={hours:0,mcqs:0};
-            monthlyData[log.name].hours+=log.hours;
-            monthlyData[log.name].mcqs+=log.mcqs;
-        }
+    logs.forEach(log=>{
+        const d = new Date(log.timestamp);
+        const dISO = d.toISOString().slice(0,10);
+        if(dISO===todayISO){ if(!daily[log.name]) daily[log.name]={hours:0,mcqs:0}; daily[log.name].hours+=log.hours; daily[log.name].mcqs+=log.mcqs; }
+        if(d>=startOfWeek){ if(!weekly[log.name]) weekly[log.name]={hours:0,mcqs:0}; weekly[log.name].hours+=log.hours; weekly[log.name].mcqs+=log.mcqs; }
+        if(d>=startOfMonth){ if(!monthly[log.name]) monthly[log.name]={hours:0,mcqs:0}; monthly[log.name].hours+=log.hours; monthly[log.name].mcqs+=log.mcqs; }
     });
 
     document.getElementById('loading').classList.add('hidden');
-    renderCombinedChart('progressChartDaily', dailyData);
-    renderCombinedChart('progressChartWeekly', weeklyData);
-    renderCombinedChart('progressChartMonthly', monthlyData);
+    dailyChart = renderCombinedChart('progressChartDaily',daily,dailyChart);
+    weeklyChart = renderCombinedChart('progressChartWeekly',weekly,weeklyChart);
+    monthlyChart = renderCombinedChart('progressChartMonthly',monthly,monthlyChart);
     toggleView('daily');
 };
 
-const renderCombinedChart = (canvasId,data) => {
+const renderCombinedChart=(canvasId,data,existingChart)=>{
     const ctx=document.getElementById(canvasId).getContext('2d');
-    let existingChart = Chart.getChart(ctx);
     if(existingChart) existingChart.destroy();
-
-    const labels = Object.keys(data);
-    const hoursData = labels.map(l=>data[l].hours);
-    const mcqsData = labels.map(l=>data[l].mcqs);
-
-    new Chart(ctx,{
+    const labels=Object.keys(data);
+    const hoursData=labels.map(l=>data[l].hours);
+    const mcqsData=labels.map(l=>data[l].mcqs);
+    return new Chart(ctx,{
         type:'bar',
         data:{
             labels,
             datasets:[
-                {label:'Hours Studied',data:hoursData,backgroundColor:'rgba(59,130,246,0.8)',borderColor:'rgba(59,130,246,1)',borderWidth:1,borderRadius:10,yAxisID:'y'},
-                {label:'MCQs Solved',data:mcqsData,type:'line',borderColor:'rgb(249,115,22)',backgroundColor:'rgba(249,115,22,0.2)',fill:false,yAxisID:'y1'}
+                {label:'Hours',data:hoursData,backgroundColor:'rgba(59,130,246,0.8)',borderColor:'rgba(59,130,246,1)',borderWidth:1,borderRadius:10,yAxisID:'y'},
+                {label:'MCQs',data:mcqsData,type:'line',borderColor:'rgb(249,115,22)',backgroundColor:'rgba(249,115,22,0.2)',fill:false,yAxisID:'y1'}
             ]
         },
-        options:{
-            responsive:true,
-            maintainAspectRatio:false,
-            scales:{
-                y:{type:'linear',display:true,position:'left',beginAtZero:true,title:{display:true,text:'Hours'}},
-                y1:{type:'linear',display:true,position:'right',beginAtZero:true,title:{display:true,text:'MCQs'},grid:{drawOnChartArea:false}}
-            },
-            plugins:{legend:{labels:{color:'#e2e8f0'}}}
-        }
+        options:{responsive:true,maintainAspectRatio:false,scales:{y:{type:'linear',position:'left',beginAtZero:true},y1:{type:'linear',position:'right',beginAtZero:true,grid:{drawOnChartArea:false}}}}
     });
 };
 
-window.toggleView = (viewType)=>{
-    const form=document.getElementById('form-view');
-    const progress=document.getElementById('progress-view');
-    const daily=document.getElementById('daily-chart-container');
-    const weekly=document.getElementById('weekly-chart-container');
-    const monthly=document.getElementById('monthly-chart-container');
-
-    if(viewType==='log'){
-        form.classList.remove('hidden');
-        progress.classList.add('hidden');
-    } else {
-        form.classList.add('hidden');
-        progress.classList.remove('hidden');
-        daily.classList.add('hidden'); weekly.classList.add('hidden'); monthly.classList.add('hidden');
-        if(viewType==='daily') daily.classList.remove('hidden');
-        if(viewType==='weekly') weekly.classList.remove('hidden');
-        if(viewType==='monthly') monthly.classList.remove('hidden');
+window.toggleView=(v)=>{
+    const f=document.getElementById('form-view');
+    const p=document.getElementById('progress-view');
+    const d=document.getElementById('daily-chart-container');
+    const w=document.getElementById('weekly-chart-container');
+    const m=document.getElementById('monthly-chart-container');
+    if(v==='log'){f.classList.remove('hidden'); p.classList.add('hidden');}
+    else{f.classList.add('hidden'); p.classList.remove('hidden'); d.classList.add('hidden'); w.classList.add('hidden'); m.classList.add('hidden');
+        if(v==='daily') d.classList.remove('hidden'); if(v==='weekly') w.classList.remove('hidden'); if(v==='monthly') m.classList.remove('hidden');
     }
 };
+
+// Refresh daily chart at midnight
+setInterval(()=>{
+    const now = new Date();
+    if(now.getHours()===0 && now.getMinutes()===0){ startRealtimeListener(); }
+},60000);
 </script>
 </body>
 </html>
