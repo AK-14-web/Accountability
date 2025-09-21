@@ -1,220 +1,470 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEET PG Accountability Tracker</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
-  <style>
-    body { font-family: 'Poppins', sans-serif; background-color: #0f172a; }
-    .card { background-color: #0b1220; color: #e2e8f0; }
-    .chart-container { position: relative; height: 400px; width: 100%; }
-    .message-box { position: fixed; top: 20px; right: 20px; z-index: 1000; }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEET PG Accountability Tracker (Updated)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --color-primary: #1e40af;
+            --color-secondary: #f97316;
+        }
+        body { font-family: 'Poppins', sans-serif; background-color: #0f172a; }
+        .container { max-width: 960px; }
+        .card { background-color: #0b1220; color: #e2e8f0; }
+        .message-box { position: fixed; top: 20px; right: 20px; z-index: 1000; }
+        .chart-container { position: relative; height: 400px; width: 100%; }
+        table { width: 100%; }
+    </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
 
-  <div id="message-box" class="hidden"></div>
+    <div id="message-box" class="hidden"></div>
 
-  <div class="container max-w-3xl card p-8 rounded-2xl shadow-2xl flex flex-col items-center space-y-8 border border-gray-700">
-    <h1 class="text-3xl sm:text-4xl font-bold text-center text-white">NEET PG Accountability</h1>
-    <p class="text-xs text-gray-400">User ID: <span id="user-id" class="font-mono text-gray-200">...</span></p>
+    <div class="container card p-8 rounded-2xl shadow-2xl flex flex-col items-center space-y-8 border border-gray-700">
+        <h1 class="text-3xl sm:text-4xl font-bold text-center text-white">NEET PG Accountability</h1>
+        <p class="text-sm text-gray-400 text-center">User ID: <span id="user-id" class="font-mono text-xs text-gray-200">Initializing...</span></p>
 
-    <!-- Navigation -->
-    <div class="flex flex-wrap justify-center gap-2 w-full">
-      <button onclick="toggleView('log')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-blue-600 text-white">Log Study</button>
-      <button onclick="toggleView('daily')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Daily</button>
-      <button onclick="toggleView('weekly')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Weekly</button>
-      <button onclick="toggleView('monthly')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Monthly</button>
+        <div class="flex flex-wrap justify-center gap-4 w-full">
+            <button id="log-btn" onclick="toggleView('log')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-blue-600 text-white shadow-lg hover:bg-blue-700">Log Study</button>
+            <button id="daily-progress-btn" onclick="toggleView('daily')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Daily</button>
+            <button id="weekly-progress-btn" onclick="toggleView('weekly')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Weekly</button>
+            <button id="monthly-progress-btn" onclick="toggleView('monthly')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Monthly</button>
+            <button id="motivation-btn" onclick="toggleView('motivation')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Motivation ✨</button>
+            <button id="study-tip-btn" onclick="toggleView('studytip')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Study Tip ✨</button>
+        </div>
+
+        <div id="form-view" class="w-full space-y-6">
+            <div class="space-y-2">
+                <label for="name-input" class="text-gray-200 font-medium">Your Name:</label>
+                <input type="text" id="name-input" placeholder="e.g., Friend A" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
+            </div>
+            <div class="space-y-2">
+                <label for="hours-input" class="text-gray-200 font-medium">Hours Studied:</label>
+                <input type="number" id="hours-input" step="0.1" placeholder="e.g., 6.5" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
+            </div>
+            <div class="space-y-2">
+                <label for="mcqs-input" class="text-gray-200 font-medium">MCQs Solved:</label>
+                <input type="number" id="mcqs-input" placeholder="e.g., 100" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
+            </div>
+            <button id="submit-btn" onclick="logStudy()" class="w-full py-4 px-6 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-colors">Submit</button>
+        </div>
+
+        <div id="gemini-view" class="w-full hidden card p-6 rounded-2xl shadow-inner border border-gray-700">
+            <h2 class="text-lg font-semibold text-white mb-2">Gemini Says:</h2>
+            <p id="gemini-result-box" class="text-gray-300 text-base leading-relaxed">Click a button above to generate some content!</p>
+        </div>
+
+        <div id="progress-view" class="w-full hidden flex flex-col items-center space-y-4">
+            <div id="loading" class="text-gray-400 text-center">Loading chart data...</div>
+
+            <div id="daily-chart-container" class="w-full hidden">
+                <h2 id="daily-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Daily Progress</h2>
+                <div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
+                    <canvas id="progressChartDaily"></canvas>
+                </div>
+            </div>
+
+            <div id="weekly-chart-container" class="w-full hidden">
+                <h2 id="weekly-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Weekly Progress</h2>
+                <div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
+                    <canvas id="progressChartWeekly"></canvas>
+                </div>
+            </div>
+
+            <div id="monthly-chart-container" class="w-full hidden">
+                <h2 id="monthly-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Monthly Progress</h2>
+                <div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
+                    <canvas id="progressChartMonthly"></canvas>
+                </div>
+                <div id="monthly-averages" class="w-full mt-4 card p-4 rounded-lg border border-gray-700 hidden">
+                    <h3 class="text-lg font-semibold text-white mb-2">Monthly Averages (per day)</h3>
+                    <div id="monthly-averages-table" class="text-gray-300 text-sm"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Input Form -->
-    <div id="form-view" class="w-full space-y-4">
-      <input type="text" id="name-input" placeholder="Your Name" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white" />
-      <input type="number" id="hours-input" step="0.1" placeholder="Hours Studied" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white" />
-      <input type="number" id="mcqs-input" placeholder="MCQs Solved" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white" />
-      <button onclick="logStudy()" class="w-full py-3 rounded-lg bg-blue-600 text-white font-bold">Submit</button>
-    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
-    <!-- Charts -->
-    <div id="progress-view" class="w-full hidden flex flex-col space-y-6">
-      <div class="chart-container card p-4 rounded-xl hidden" id="daily-container">
-        <h2 class="text-xl text-white mb-2 text-center">Daily Progress</h2>
-        <canvas id="dailyChart"></canvas>
-      </div>
-      <div class="chart-container card p-4 rounded-xl hidden" id="weekly-container">
-        <h2 class="text-xl text-white mb-2 text-center">Weekly Progress</h2>
-        <canvas id="weeklyChart"></canvas>
-      </div>
-      <div class="chart-container card p-4 rounded-xl hidden" id="monthly-container">
-        <h2 class="text-xl text-white mb-2 text-center">Monthly Progress</h2>
-        <canvas id="monthlyChart"></canvas>
-      </div>
-    </div>
-  </div>
+        // helpers
+        const showMessage = (message, type = 'info') => {
+            const messageBox = document.getElementById('message-box');
+            messageBox.textContent = message;
+            messageBox.className = `message-box p-4 rounded-xl shadow-lg text-white ${type === 'success' ? 'bg-green-500' : type === 'info' ? 'bg-blue-500' : 'bg-red-500'}`;
+            messageBox.style.display = 'block';
+            setTimeout(() => { messageBox.style.display = 'none'; }, 3000);
+        };
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        const localISODate = (d) => {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        };
 
-    // ===== Helpers =====
-    const localISODate = (d) => d.toISOString().split("T")[0];
-    const todayISO = () => localISODate(new Date());
+        // Color palette and deterministic mapping per name
+        const colorPalette = [
+            '#3b82f6', '#f97316', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4', '#f59e0b', '#60a5fa', '#f472b6'
+        ];
+        const getColorForUser = (username) => {
+            if (!username) return colorPalette[0];
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                hash = (hash << 5) - hash + username.charCodeAt(i);
+                hash |= 0;
+            }
+            return colorPalette[Math.abs(hash) % colorPalette.length];
+        };
 
-    const showMessage = (msg, type="info") => {
-      const box = document.getElementById("message-box");
-      box.textContent = msg;
-      box.className = `message-box p-3 rounded ${type==="success"?"bg-green-600":"bg-blue-600"} text-white`;
-      box.style.display = "block";
-      setTimeout(()=> box.style.display="none", 2000);
-    };
+        // App state
+        let db, auth, userId = null, unsubscribe = null;
+        let logsCache = [];
+        let lastRenderedDate = localISODate(new Date());
 
-    const colorPalette = [
-      "#3b82f6","#f97316","#10b981","#ef4444","#8b5cf6","#06b6d4","#f59e0b",
-      "#14b8a6","#a855f7","#ec4899","#22c55e","#eab308","#0ea5e9","#f87171","#4ade80"
-    ];
-    const getColorForUser = (name) => {
-      let hash=0; for(let i=0;i<name.length;i++) hash=name.charCodeAt(i)+((hash<<5)-hash);
-      return colorPalette[Math.abs(hash)%colorPalette.length];
-    };
+        window.addEventListener('DOMContentLoaded', async () => {
+            setLogLevel('debug');
 
-    // ===== Firebase =====
-    const app = initializeApp({
-      apiKey: "AIzaSyAWsR8Q7PalXP2Yo0D_62LH1y3a-lVRwNs",
-      authDomain: "neet-pg-accountability.firebaseapp.com",
-      projectId: "neet-pg-accountability",
-      storageBucket: "neet-pg-accountability.appspot.com",
-      messagingSenderId: "248678627903",
-      appId: "1:248678627903:web:f20558585e14b9e99c168a"
-    });
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-    let logsCache = [];
-    let charts = {};
+            const localFirebaseConfig = {
+                apiKey: "AIzaSyAWsR8Q7PalXP2Yo0D_62LH1y3a-lVRwNs",
+                authDomain: "neet-pg-accountability.firebaseapp.com",
+                databaseURL: "https://neet-pg-accountability-default-rtdb.asia-southeast1.firebasedatabase.app",
+                projectId: "neet-pg-accountability",
+                storageBucket: "neet-pg-accountability.firebasestorage.app",
+                messagingSenderId: "248678627903",
+                appId: "1:248678627903:web:f20558585e14b9e99c168a"
+            };
 
-    onAuthStateChanged(auth, user=>{
-      if(user){
-        document.getElementById("user-id").textContent=user.uid;
-        startRealtimeListener();
-      } else {
-        signInAnonymously(auth);
-      }
-    });
+            const finalFirebaseConfig = Object.keys(firebaseConfig).length > 0 ? firebaseConfig : localFirebaseConfig;
 
-    window.logStudy = async () => {
-      const name = document.getElementById("name-input").value.trim();
-      const hours = parseFloat(document.getElementById("hours-input").value);
-      const mcqs = parseInt(document.getElementById("mcqs-input").value);
+            if (finalFirebaseConfig) {
+                const app = initializeApp(finalFirebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
 
-      if(!name || isNaN(hours) || isNaN(mcqs)) return showMessage("Fill all fields","error");
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('user-id').textContent = userId;
+                        startRealtimeListener();
+                    } else {
+                        showMessage('Authentication failed. Please try again.', 'error');
+                        console.error('Authentication failed.');
+                    }
+                });
 
-      const now = new Date();
-      const log = {
-        userId: auth.currentUser.uid,
-        name,
-        hours,
-        mcqs,
-        dateISO: localISODate(now),
-        timestampISO: now.toISOString(),
-        server_ts: serverTimestamp()
-      };
+                if (initialAuthToken) {
+                    try { await signInWithCustomToken(auth, initialAuthToken); } catch (e) { console.warn(e); await signInAnonymously(auth); }
+                } else {
+                    await signInAnonymously(auth);
+                }
 
-      try {
-        await addDoc(collection(db,"study_logs"), log);
-        showMessage("Logged!","success");
-      } catch(e){ console.error(e); showMessage("Error","error"); }
-    };
+                // Prefill name if saved
+                const savedName = localStorage.getItem('npga_name');
+                if (savedName) document.getElementById('name-input').value = savedName;
 
-    const startRealtimeListener = () => {
-      const q = query(collection(db,"study_logs"));
-      onSnapshot(q,snap=>{
-        logsCache = snap.docs.map(d=>d.data());
-        updateCharts();
-      });
-    };
+                // refresh charts every minute to handle midnight rollover
+                setInterval(() => {
+                    const today = localISODate(new Date());
+                    if (today !== lastRenderedDate) {
+                        lastRenderedDate = today;
+                        // re-render using cached logs
+                        updateCharts(logsCache);
+                    }
+                }, 60 * 1000);
 
-    // ===== Chart Rendering =====
-    const renderChart = (canvasId, dataObj, title) => {
-      const ctx = document.getElementById(canvasId);
-      if(charts[canvasId]) charts[canvasId].destroy();
+            } else {
+                showMessage('Firebase config not found. Please add your config to the file.', 'error');
+                console.error('Firebase config not found.');
+            }
+        });
 
-      const labels = Object.keys(dataObj);
-      const hours = labels.map(l=>dataObj[l].hours);
-      const mcqs = labels.map(l=>dataObj[l].mcqs);
-      const colors = labels.map(l=>getColorForUser(l));
+        window.logStudy = async function logStudy() {
+            if (!auth || !auth.currentUser) {
+                await signInAnonymously(auth);
+                showMessage('Authenticating user, please try again.', 'info');
+                return;
+            }
+            const uid = auth.currentUser.uid;
 
-      charts[canvasId] = new Chart(ctx,{
-        type:"bar",
-        data:{
-          labels,
-          datasets:[
-            { label:"Hours", data:hours, backgroundColor:colors, yAxisID:"y" },
-            { label:"MCQs", data:mcqs, type:"line", borderColor:"#f97316", tension:0.3, yAxisID:"y1" }
-          ]
-        },
-        options:{
-          responsive:true,
-          scales:{
-            y:{ beginAtZero:true },
-            y1:{ beginAtZero:true, position:"right" }
-          }
-        }
-      });
-    };
+            const hoursEl = document.getElementById('hours-input');
+            const nameEl = document.getElementById('name-input');
+            const mcqsEl = document.getElementById('mcqs-input');
 
-    const updateCharts = () => {
-      const now = new Date();
-      const today = todayISO();
+            const hours = hoursEl.value;
+            const name = nameEl.value;
+            const mcqs = mcqsEl.value;
 
-      const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate()-now.getDay());
-      const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(startOfWeek.getDate()+6);
-      const startOfMonth = new Date(now.getFullYear(),now.getMonth(),1);
+            if (hours === '' || name === '' || mcqs === '') { showMessage('Please fill in all fields.', 'error'); return; }
+            if (isNaN(parseFloat(hours))) { showMessage('Hours must be a number.', 'error'); return; }
+            if (isNaN(parseInt(mcqs))) { showMessage('MCQs must be a number.', 'error'); return; }
 
-      const daily={}, weekly={}, monthly={};
+            const normalizedName = name.trim();
+            localStorage.setItem('npga_name', normalizedName);
 
-      logsCache.forEach(log=>{
-        const logDate = new Date(log.timestampISO||log.dateISO);
-        if(log.dateISO===today){
-          (daily[log.name]??={hours:0,mcqs:0});
-          daily[log.name].hours+=log.hours; daily[log.name].mcqs+=log.mcqs;
-        }
-        if(logDate>=startOfWeek && logDate<=endOfWeek){
-          (weekly[log.name]??={hours:0,mcqs:0});
-          weekly[log.name].hours+=log.hours; weekly[log.name].mcqs+=log.mcqs;
-        }
-        if(logDate>=startOfMonth){
-          (monthly[log.name]??={hours:0,mcqs:0});
-          monthly[log.name].hours+=log.hours; monthly[log.name].mcqs+=log.mcqs;
-        }
-      });
+            const now = new Date();
+            const studyData = {
+                userId: uid,
+                name: normalizedName,
+                hours: parseFloat(hours),
+                mcqs: parseInt(mcqs),
+                dateISO: localISODate(now),
+                timestampISO: now.toISOString(),
+                server_ts: serverTimestamp()
+            };
 
-      renderChart("dailyChart", daily, "Daily Progress");
-      renderChart("weeklyChart", weekly, "Weekly Progress");
-      renderChart("monthlyChart", monthly, "Monthly Progress");
-    };
+            const collectionPath = `/artifacts/${'default-app-id'}/public/data/study_logs`;
+            const studyLogsRef = collection(db, collectionPath);
 
-    // Midnight reset check
-    setInterval(updateCharts, 60000);
+            try {
+                await addDoc(studyLogsRef, studyData);
+                hoursEl.value = '';
+                mcqsEl.value = '';
+                // keep name prefilled
+                showMessage('Study logged successfully!', 'success');
+            } catch (e) {
+                console.error('Error adding document: ', e);
+                showMessage('Error logging study.', 'error');
+            }
+        };
 
-    // ===== View Switcher =====
-    window.toggleView = (view) => {
-      document.getElementById("form-view").classList.add("hidden");
-      document.getElementById("progress-view").classList.remove("hidden");
-      ["daily","weekly","monthly"].forEach(v=>{
-        document.getElementById(v+"-container").classList.add("hidden");
-      });
+        const startRealtimeListener = async () => {
+            if (!auth || unsubscribe) return;
+            const collectionPath = `/artifacts/${'default-app-id'}/public/data/study_logs`;
+            const studyLogsRef = collection(db, collectionPath);
+            const q = query(studyLogsRef);
 
-      if(view==="log"){
-        document.getElementById("form-view").classList.remove("hidden");
-        document.getElementById("progress-view").classList.add("hidden");
-      } else {
-        document.getElementById(view+"-container").classList.remove("hidden");
-      }
-    };
-  </script>
+            unsubscribe = onSnapshot(q, (querySnapshot) => {
+                const logs = [];
+                querySnapshot.forEach((doc) => {
+                    logs.push(doc.data());
+                });
+                logsCache = logs;
+                updateCharts(logs);
+            }, (error) => {
+                console.error('Error listening to collection:', error);
+                showMessage('Error fetching data.', 'error');
+            });
+        };
+
+        // Chart instances
+        let chartDaily = null, chartWeekly = null, chartMonthly = null;
+
+        const updateCharts = (logs) => {
+            const today = new Date();
+            const todayISO = localISODate(today);
+
+            // Prepare buckets
+            const dailyData = {};
+            const weeklyData = {};
+            const monthlyData = {};
+
+            const now = new Date();
+            const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay()));
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+            logs.forEach(log => {
+                // prefer dateISO saved at write-time
+                const logDateISO = log.dateISO || (log.timestampISO ? log.timestampISO.slice(0,10) : null) || localISODate(new Date());
+                const logDate = new Date((log.timestampISO) ? log.timestampISO : new Date());
+
+                // Daily
+                if (logDateISO === todayISO) {
+                    if (!dailyData[log.name]) dailyData[log.name] = { hours: 0, mcqs: 0 };
+                    dailyData[log.name].hours += (log.hours || 0);
+                    dailyData[log.name].mcqs += (log.mcqs || 0);
+                }
+
+                // Weekly (use logDate)
+                if (logDate >= startOfWeek && logDate <= endOfWeek) {
+                    if (!weeklyData[log.name]) weeklyData[log.name] = { hours: 0, mcqs: 0 };
+                    weeklyData[log.name].hours += (log.hours || 0);
+                    weeklyData[log.name].mcqs += (log.mcqs || 0);
+                }
+
+                // Monthly (compare by month/year)
+                if (logDate >= startOfMonth) {
+                    if (!monthlyData[log.name]) monthlyData[log.name] = { hours: 0, mcqs: 0 };
+                    monthlyData[log.name].hours += (log.hours || 0);
+                    monthlyData[log.name].mcqs += (log.mcqs || 0);
+                }
+            });
+
+            document.getElementById('loading').classList.add('hidden');
+
+            const todayDateString = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            renderCombinedChart('progressChartDaily', dailyData, 'daily');
+            document.getElementById('daily-chart-title').textContent = `Daily Progress (${todayDateString})`;
+
+            const weeklyRangeString = `${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+            renderCombinedChart('progressChartWeekly', weeklyData, 'weekly');
+            document.getElementById('weekly-chart-title').textContent = `Weekly Progress (${weeklyRangeString})`;
+
+            const monthlyRangeString = `${now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+            renderCombinedChart('progressChartMonthly', monthlyData, 'monthly');
+            document.getElementById('monthly-chart-title').textContent = `Monthly Progress (${monthlyRangeString})`;
+
+            renderMonthlyAverages(monthlyData, now);
+
+            toggleView('daily');
+        };
+
+        const renderMonthlyAverages = (monthlyData, now) => {
+            const container = document.getElementById('monthly-averages');
+            const tableWrap = document.getElementById('monthly-averages-table');
+            if (!monthlyData || Object.keys(monthlyData).length === 0) {
+                container.classList.add('hidden');
+                tableWrap.innerHTML = '';
+                return;
+            }
+            const daysSoFar = now.getDate();
+            const rows = ['<table class="table-auto text-sm text-gray-300"><thead><tr><th class="px-2 py-1 text-left">Name</th><th class="px-2 py-1 text-right">Avg Hours/day</th><th class="px-2 py-1 text-right">Avg MCQs/day</th></tr></thead><tbody>'];
+            Object.keys(monthlyData).forEach(name => {
+                const h = monthlyData[name].hours || 0;
+                const m = monthlyData[name].mcqs || 0;
+                const avgH = (h / daysSoFar).toFixed(2);
+                const avgM = Math.round(m / daysSoFar);
+                rows.push(`<tr><td class="px-2 py-1">${escapeHtml(name)}</td><td class="px-2 py-1 text-right">${avgH}</td><td class="px-2 py-1 text-right">${avgM}</td></tr>`);
+            });
+            rows.push('</tbody></table>');
+            tableWrap.innerHTML = rows.join('');
+            container.classList.remove('hidden');
+        };
+
+        // escape simple HTML for names
+        const escapeHtml = (unsafe) => {
+            return unsafe.replace(/[&<"'>]/g, function (m) {
+                return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"})[m];
+            });
+        };
+
+        const renderCombinedChart = (canvasId, data, kind) => {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            // destroy existing
+            const existing = Chart.getChart(ctx);
+            if (existing) existing.destroy();
+
+            const labels = Object.keys(data).sort();
+            const hoursData = labels.map(l => data[l].hours);
+            const mcqsData = labels.map(l => data[l].mcqs);
+
+            // map colors per label for bars
+            const bgColors = labels.map(l => getColorForUser(l));
+
+            const datasets = [];
+            datasets.push({
+                label: 'Hours Studied',
+                data: hoursData,
+                backgroundColor: bgColors,
+                borderColor: bgColors,
+                borderWidth: 1,
+                borderRadius: 10,
+                yAxisID: 'y'
+            });
+
+            datasets.push({
+                label: 'MCQs Solved',
+                data: mcqsData,
+                type: 'line',
+                borderColor: 'rgba(249, 115, 22, 1)',
+                backgroundColor: 'rgba(249, 115, 22, 0.2)',
+                fill: false,
+                tension: 0.3,
+                yAxisID: 'y1'
+            });
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { type: 'linear', display: true, position: 'left', beginAtZero: true, title: { display: true, text: 'Hours' } },
+                        y1: { type: 'linear', display: true, position: 'right', beginAtZero: true, title: { display: true, text: 'MCQs' }, grid: { drawOnChartArea: false } }
+                    },
+                    plugins: { legend: { display: true, position: 'top', labels: { color: '#e2e8f0' } }, tooltip: { mode: 'index', intersect: false } }
+                }
+            });
+
+            if (kind === 'daily') chartDaily = chart;
+            if (kind === 'weekly') chartWeekly = chart;
+            if (kind === 'monthly') chartMonthly = chart;
+        };
+
+        // view toggler
+        window.toggleView = (viewType) => {
+            const formView = document.getElementById('form-view');
+            const progressView = document.getElementById('progress-view');
+            const dailyChartContainer = document.getElementById('daily-chart-container');
+            const weeklyChartContainer = document.getElementById('weekly-chart-container');
+            const monthlyChartContainer = document.getElementById('monthly-chart-container');
+            const logBtn = document.getElementById('log-btn');
+            const dailyBtn = document.getElementById('daily-progress-btn');
+            const weeklyBtn = document.getElementById('weekly-progress-btn');
+            const monthlyBtn = document.getElementById('monthly-progress-btn');
+            const geminiView = document.getElementById('gemini-view');
+            const motivationBtn = document.getElementById('motivation-btn');
+            const studyTipBtn = document.getElementById('study-tip-btn');
+
+            // reset highlights
+            [logBtn, dailyBtn, weeklyBtn, monthlyBtn, motivationBtn, studyTipBtn].forEach(b => b.classList.remove('bg-blue-600','text-white'));
+
+            if (viewType === 'log') {
+                formView.classList.remove('hidden');
+                progressView.classList.add('hidden');
+                geminiView.classList.add('hidden');
+                logBtn.classList.add('bg-blue-600','text-white');
+            } else if (viewType === 'motivation' || viewType === 'studytip') {
+                formView.classList.add('hidden');
+                progressView.classList.add('hidden');
+                geminiView.classList.remove('hidden');
+                if (viewType === 'motivation') motivationBtn.classList.add('bg-blue-600','text-white'); else studyTipBtn.classList.add('bg-blue-600','text-white');
+                // generate content (left as-is but will use the client-side Gemini call if key present)
+                const prompt = viewType === 'motivation' ? "Generate a concise and powerful motivational quote for a medical student studying for a postgraduate exam." : "Provide a single, effective study strategy or tip for someone preparing for a difficult medical entrance exam like NEET PG. Focus on a practical, actionable tip.";
+                generateContent(prompt);
+            } else {
+                formView.classList.add('hidden');
+                progressView.classList.remove('hidden');
+                geminiView.classList.add('hidden');
+                if (viewType === 'daily') { dailyChartContainer.classList.remove('hidden'); weeklyChartContainer.classList.add('hidden'); monthlyChartContainer.classList.add('hidden'); dailyBtn.classList.add('bg-blue-600','text-white'); }
+                if (viewType === 'weekly') { weeklyChartContainer.classList.remove('hidden'); dailyChartContainer.classList.add('hidden'); monthlyChartContainer.classList.add('hidden'); weeklyBtn.classList.add('bg-blue-600','text-white'); }
+                if (viewType === 'monthly') { monthlyChartContainer.classList.remove('hidden'); dailyChartContainer.classList.add('hidden'); weeklyChartContainer.classList.add('hidden'); monthlyBtn.classList.add('bg-blue-600','text-white'); }
+            }
+        };
+
+        // Gemini generation (kept but API key exposure warning remains)
+        const generateContent = async (prompt) => {
+            const resultBox = document.getElementById('gemini-result-box');
+            resultBox.textContent = 'Generating...';
+            const apiKey = ""; // leave blank or set your key
+            if (!apiKey) { resultBox.textContent = 'API key not configured in this demo.'; return; }
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            try {
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) { resultBox.textContent = 'Error generating content.'; return; }
+                const result = await response.json();
+                const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                resultBox.textContent = generatedText || 'No content generated.';
+            } catch (e) { console.error(e); resultBox.textContent = 'Error generating content.'; }
+        };
+
+    </script>
 </body>
 </html>
