@@ -3,14 +3,15 @@
   import { getFirestore, collection, addDoc, query, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
   import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
-  const firebaseConfig = {
-    apiKey: "YOUR_FIREBASE_API_KEY",
-    authDomain: "YOUR_FIREBASE_PROJECT.firebaseapp.com",
-    projectId: "YOUR_FIREBASE_PROJECT",
-    storageBucket: "YOUR_FIREBASE_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyAWsR8Q7PalXP2Yo0D_62LH1y3a-lVRwNs",
+  authDomain: "neet-pg-accountability.firebaseapp.com",
+  databaseURL: "https://neet-pg-accountability-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "neet-pg-accountability",
+  storageBucket: "neet-pg-accountability.firebasestorage.app",
+  messagingSenderId: "248678627903",
+  appId: "1:248678627903:web:f20558585e14b9e99c168a"
+};
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
