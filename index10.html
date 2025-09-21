@@ -97,32 +97,27 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
-                // Authenticate the user
-                if (initialAuthToken) {
-                    try {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } catch (error) {
-                        console.error("Error signing in with custom token:", error);
-                        // Fallback to anonymous sign-in if custom token fails
-                        await signInAnonymously(auth);
-                    }
-                } else {
-                    // Directly use anonymous sign-in when no custom token is available
-                    await signInAnonymously(auth);
-                }
-
-                // Listen for auth state changes and initialize app
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         userId = user.uid;
                         document.getElementById('user-id').textContent = userId;
-                        // Start listening for data once authenticated
                         startRealtimeListener();
                     } else {
                         showMessage('Authentication failed. Please try again.', 'error');
                         console.error('Authentication failed.');
                     }
                 });
+
+                if (initialAuthToken) {
+                    try {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } catch (error) {
+                        console.error("Error signing in with custom token:", error);
+                        await signInAnonymously(auth);
+                    }
+                } else {
+                    await signInAnonymously(auth);
+                }
             } else {
                 showMessage('Firebase config not found. Please add your config to the file.', 'error');
                 console.error("Firebase config not found.");
@@ -154,7 +149,6 @@
                 return;
             }
 
-            // Normalize the name before saving it to the database
             const normalizedName = name.trim().toLowerCase();
 
             const studyData = {
@@ -207,6 +201,7 @@
             const today = new Date();
             const todayISO = today.toISOString().slice(0, 10);
             
+            const dailyData = {};
             const weeklyData = {};
             const now = new Date();
             const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay()));
@@ -216,26 +211,22 @@
             const monthlyData = {};
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-            // Process all logs for all charts
             logs.forEach(log => {
                 const logDate = log.timestamp ? new Date(log.timestamp) : new Date();
                 const logDateISO = logDate.toISOString().slice(0, 10);
 
-                // Daily data
                 if (logDateISO === todayISO) {
                     if (!dailyData[log.name]) dailyData[log.name] = { hours: 0, mcqs: 0 };
                     dailyData[log.name].hours += log.hours;
                     dailyData[log.name].mcqs += log.mcqs;
                 }
 
-                // Weekly data
                 if (logDate >= startOfWeek && logDate <= endOfWeek) {
                     if (!weeklyData[log.name]) weeklyData[log.name] = { hours: 0, mcqs: 0 };
                     weeklyData[log.name].hours += log.hours;
                     weeklyData[log.name].mcqs += log.mcqs;
                 }
 
-                // Monthly data
                 if (logDate >= startOfMonth) {
                     if (!monthlyData[log.name]) monthlyData[log.name] = { hours: 0, mcqs: 0 };
                     monthlyData[log.name].hours += log.hours;
@@ -245,7 +236,6 @@
 
             document.getElementById('loading').classList.add('hidden');
             
-            // Render all charts
             const todayDateString = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
             renderCombinedChart('progressChartDaily', dailyData);
             document.getElementById('daily-chart-title').textContent = `Daily Progress (${todayDateString})`;
@@ -258,7 +248,6 @@
             renderCombinedChart('progressChartMonthly', monthlyData);
             document.getElementById('monthly-chart-title').textContent = `Monthly Progress (${monthlyRangeString})`;
             
-            // Initial view set to daily
             toggleView('daily');
         };
 
@@ -343,7 +332,7 @@
                             display: true,
                             position: 'top',
                             labels: {
-                                color: '#e2e8f0', /* Light text for legend */
+                                color: '#e2e8f0',
                             }
                         },
                         tooltip: {
@@ -363,7 +352,7 @@
         const generateContent = async (prompt) => {
             const resultBox = document.getElementById('gemini-result-box');
             resultBox.textContent = 'Generating...';
-            const apiKey = ""; 
+            const apiKey = "";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
             const payload = {
@@ -417,7 +406,6 @@
                 motivationBtn.classList.add('bg-gray-600', 'text-white');
                 studyTipBtn.classList.remove('bg-blue-600', 'text-white');
                 studyTipBtn.classList.add('bg-gray-600', 'text-white');
-
             } else if (viewType === 'motivation' || viewType === 'studytip') {
                 formView.classList.add('hidden');
                 progressView.classList.add('hidden');
