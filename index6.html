@@ -251,19 +251,22 @@
             
             // Render all charts
             const todayDateString = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-            renderCombinedChart('progressChartDaily', dailyData, `Daily Progress (${todayDateString})`);
+            renderCombinedChart('progressChartDaily', dailyData);
+            document.getElementById('daily-chart-title').textContent = `Daily Progress (${todayDateString})`;
             
             const weeklyRangeString = `${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-            renderCombinedChart('progressChartWeekly', weeklyData, `Weekly Progress (${weeklyRangeString})`);
+            renderCombinedChart('progressChartWeekly', weeklyData);
+            document.getElementById('weekly-chart-title').textContent = `Weekly Progress (${weeklyRangeString})`;
             
             const monthlyRangeString = `${now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
-            renderCombinedChart('progressChartMonthly', monthlyData, `Monthly Progress (${monthlyRangeString})`);
+            renderCombinedChart('progressChartMonthly', monthlyData);
+            document.getElementById('monthly-chart-title').textContent = `Monthly Progress (${monthlyRangeString})`;
             
             // Initial view set to daily
             toggleView('daily');
         };
 
-        const renderCombinedChart = (canvasId, data, chartTitle) => {
+        const renderCombinedChart = (canvasId, data) => {
             const ctx = document.getElementById(canvasId).getContext('2d');
             let existingChart = Chart.getChart(ctx);
             if (existingChart) {
@@ -446,7 +449,7 @@
 
             <!-- Daily Progress Chart -->
             <div id="daily-chart-container" class="w-full hidden">
-                <h2 class="text-2xl font-semibold text-gray-800 text-center mb-4">Daily Progress</h2>
+                <h2 id="daily-chart-title" class="text-2xl font-semibold text-gray-800 text-center mb-4">Daily Progress</h2>
                 <div class="chart-container">
                     <canvas id="progressChartDaily"></canvas>
                 </div>
@@ -454,7 +457,7 @@
 
             <!-- Weekly Progress Chart -->
             <div id="weekly-chart-container" class="w-full hidden">
-                <h2 class="text-2xl font-semibold text-gray-800 text-center mb-4">Weekly Progress</h2>
+                <h2 id="weekly-chart-title" class="text-2xl font-semibold text-gray-800 text-center mb-4">Weekly Progress</h2>
                 <div class="chart-container">
                     <canvas id="progressChartWeekly"></canvas>
                 </div>
@@ -462,7 +465,7 @@
 
             <!-- Monthly Progress Chart -->
             <div id="monthly-chart-container" class="w-full hidden">
-                <h2 class="text-2xl font-semibold text-gray-800 text-center mb-4">Monthly Progress</h2>
+                <h2 id="monthly-chart-title" class="text-2xl font-semibold text-gray-800 text-center mb-4">Monthly Progress</h2>
                 <div class="chart-container">
                     <canvas id="progressChartMonthly"></canvas>
                 </div>
@@ -472,4 +475,3 @@
     </div>
 </body>
 </html>
-
