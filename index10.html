@@ -141,7 +141,7 @@ window.logStudy = async function() {
 
     const data = { userId, name: name.toLowerCase(), hours, mcqs, timestamp: serverTimestamp() };
     try{
-        const ref = collection(db,'study_logs');
+        const ref = collection(db,'`/artifacts/default-app-id/public/data/study_logs`');
         await addDoc(ref,data);
         document.getElementById('hours-input').value='';
         document.getElementById('mcqs-input').value='';
@@ -161,7 +161,7 @@ const getLogDate = (log)=>{
 
 const startRealtimeListener = ()=>{
     if(unsubscribe) unsubscribe();
-    const ref = collection(db,'study_logs');
+    const ref = collection(db,`/artifacts/default-app-id/public/data/study_logs`);
     const q = query(ref);
     unsubscribe = onSnapshot(q, snapshot=>{
         const logs = [];
