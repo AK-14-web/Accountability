@@ -12,6 +12,8 @@
     .card { background-color: #0b1220; color: #e2e8f0; }
     .chart-container { position: relative; height: 400px; width: 100%; }
     .message-box { position: fixed; top: 20px; right: 20px; z-index: 1000; }
+    .tab-btn.active { background-color: #1e40af; }
+    .tab-btn { transition: background-color 0.2s; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
@@ -24,10 +26,12 @@
 
     <!-- Navigation -->
     <div class="flex flex-wrap justify-center gap-2 w-full">
-      <button onclick="toggleView('log')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-blue-600 text-white">Log Study</button>
+      <button onclick="toggleView('log')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-blue-600 text-white active">Log Study</button>
       <button onclick="toggleView('daily')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Daily</button>
       <button onclick="toggleView('weekly')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Weekly</button>
       <button onclick="toggleView('monthly')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Monthly</button>
+      <button onclick="getMotivation()" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Motivation ✨</button>
+      <button onclick="getStudyTip()" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Study Tip ✨</button>
     </div>
 
     <!-- Input Form -->
@@ -40,18 +44,24 @@
 
     <!-- Charts -->
     <div id="progress-view" class="w-full hidden flex flex-col space-y-6">
+      <div id="loading" class="text-gray-400 text-center">Loading data...</div>
+
       <div class="chart-container card p-4 rounded-xl hidden" id="daily-container">
-        <h2 class="text-xl text-white mb-2 text-center">Daily Progress</h2>
+        <h2 id="daily-chart-title" class="text-xl text-white mb-2 text-center">Daily Progress</h2>
         <canvas id="dailyChart"></canvas>
       </div>
       <div class="chart-container card p-4 rounded-xl hidden" id="weekly-container">
-        <h2 class="text-xl text-white mb-2 text-center">Weekly Progress</h2>
+        <h2 id="weekly-chart-title" class="text-xl text-white mb-2 text-center">Weekly Progress</h2>
         <canvas id="weeklyChart"></canvas>
       </div>
       <div class="chart-container card p-4 rounded-xl hidden" id="monthly-container">
-        <h2 class="text-xl text-white mb-2 text-center">Monthly Progress</h2>
+        <h2 id="monthly-chart-title" class="text-xl text-white mb-2 text-center">Monthly Progress</h2>
         <canvas id="monthlyChart"></canvas>
       </div>
+    </div>
+     <!-- Gemini Output Container -->
+    <div id="gemini-output" class="w-full hidden card p-6 rounded-xl shadow-lg border border-gray-700">
+        <p id="gemini-content" class="text-gray-300 text-center text-sm"></p>
     </div>
   </div>
 
@@ -137,8 +147,46 @@
       });
     };
 
-    // ===== Chart Rendering =====
-    const renderChart = (canvasId, dataObj, title) => {
+    const updateCharts = () => {
+      const now = new Date();
+      const todayISO = localISODate(now);
+
+      const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate()-now.getDay());
+      const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(startOfWeek.getDate()+6);
+      const startOfMonth = new Date(now.getFullYear(),now.getMonth(),1);
+
+      const daily={}, weekly={}, monthly={};
+
+      logsCache.forEach(log=>{
+        const logDate = new Date(log.timestampISO||log.dateISO);
+        if(log.dateISO===todayISO){
+          (daily[log.name]??={hours:0,mcqs:0});
+          daily[log.name].hours+=log.hours; daily[log.name].mcqs+=log.mcqs;
+        }
+        if(logDate>=startOfWeek && logDate<=endOfWeek){
+          (weekly[log.name]??={hours:0,mcqs:0});
+          weekly[log.name].hours+=log.hours; weekly[log.name].mcqs+=log.mcqs;
+        }
+        if(logDate>=startOfMonth){
+          (monthly[log.name]??={hours:0,mcqs:0});
+          monthly[log.name].hours+=log.hours; monthly[log.name].mcqs+=log.mcqs;
+        }
+      });
+      
+      const dailyTitle = `Daily Progress (${new Date().toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})})`;
+      const weeklyTitle = `Weekly Progress (${startOfWeek.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})} - ${endOfWeek.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})})`;
+      const monthlyTitle = `Monthly Progress (${new Date().toLocaleDateString('en-US', {month: 'long', year: 'numeric'})})`;
+
+      document.getElementById('daily-chart-title').textContent = dailyTitle;
+      document.getElementById('weekly-chart-title').textContent = weeklyTitle;
+      document.getElementById('monthly-chart-title').textContent = monthlyTitle;
+
+      renderChart("dailyChart", daily);
+      renderChart("weeklyChart", weekly);
+      renderChart("monthlyChart", monthly);
+    };
+
+    const renderChart = (canvasId, dataObj) => {
       const ctx = document.getElementById(canvasId);
       if(charts[canvasId]) charts[canvasId].destroy();
 
@@ -165,56 +213,93 @@
         }
       });
     };
+    
+    // ===== Gemini API Logic =====
+    const API_KEY = "AIzaSyBT8pI847BvkPnZP-W1Dcx-lSIhPdBco9E";
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+    
+    const geminiOutput = document.getElementById('gemini-output');
+    const geminiContent = document.getElementById('gemini-content');
 
-    const updateCharts = () => {
-      const now = new Date();
-      const today = todayISO();
-
-      const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate()-now.getDay());
-      const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(startOfWeek.getDate()+6);
-      const startOfMonth = new Date(now.getFullYear(),now.getMonth(),1);
-
-      const daily={}, weekly={}, monthly={};
-
-      logsCache.forEach(log=>{
-        const logDate = new Date(log.timestampISO||log.dateISO);
-        if(log.dateISO===today){
-          (daily[log.name]??={hours:0,mcqs:0});
-          daily[log.name].hours+=log.hours; daily[log.name].mcqs+=log.mcqs;
+    async function generateContent(prompt) {
+        if (!API_KEY) {
+            showMessage("API Key is missing. Please add your key to the file.", "error");
+            return;
         }
-        if(logDate>=startOfWeek && logDate<=endOfWeek){
-          (weekly[log.name]??={hours:0,mcqs:0});
-          weekly[log.name].hours+=log.hours; weekly[log.name].mcqs+=log.mcqs;
-        }
-        if(logDate>=startOfMonth){
-          (monthly[log.name]??={hours:0,mcqs:0});
-          monthly[log.name].hours+=log.hours; monthly[log.name].mcqs+=log.mcqs;
-        }
-      });
 
-      renderChart("dailyChart", daily, "Daily Progress");
-      renderChart("weeklyChart", weekly, "Weekly Progress");
-      renderChart("monthlyChart", monthly, "Monthly Progress");
+        geminiOutput.classList.remove('hidden');
+        geminiContent.textContent = "Loading...";
+
+        try {
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }]
+            };
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error("API error:", errorData);
+                throw new Error(errorData.error.message || "API call failed.");
+            }
+
+            const result = await response.json();
+            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            geminiContent.textContent = text || "No content generated.";
+        } catch (error) {
+            console.error("Error generating content:", error);
+            geminiContent.textContent = "Error generating content. Please try again.";
+        }
+    }
+
+    window.getMotivation = () => {
+        generateContent("Generate a short, powerful, and unique motivational quote for a medical student studying for an exam. Keep it under 20 words.");
     };
 
-    // Midnight reset check
+    window.getStudyTip = () => {
+        generateContent("Provide a concise and actionable study tip for a medical student preparing for the NEET PG exam. Keep it under 30 words.");
+    };
+
     setInterval(updateCharts, 60000);
 
-    // ===== View Switcher =====
+    const setActiveButton = (view) => {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active', 'bg-blue-600', 'text-white');
+        btn.classList.add('bg-gray-600', 'text-white');
+      });
+      const activeButton = document.querySelector(`[onclick="toggleView('${view}')"]`);
+      if (activeButton) {
+        activeButton.classList.add('active', 'bg-blue-600', 'text-white');
+        activeButton.classList.remove('bg-gray-600');
+      }
+    };
+
     window.toggleView = (view) => {
       document.getElementById("form-view").classList.add("hidden");
       document.getElementById("progress-view").classList.remove("hidden");
-      ["daily","weekly","monthly"].forEach(v=>{
-        document.getElementById(v+"-container").classList.add("hidden");
+      document.getElementById("loading").classList.remove('hidden');
+      document.getElementById("gemini-output").classList.add('hidden');
+
+      ["daily-container","weekly-container","monthly-container"].forEach(id => {
+        document.getElementById(id).classList.add("hidden");
       });
 
       if(view==="log"){
         document.getElementById("form-view").classList.remove("hidden");
         document.getElementById("progress-view").classList.add("hidden");
+        document.getElementById("loading").classList.add('hidden');
       } else {
-        document.getElementById(view+"-container").classList.remove("hidden");
+        document.getElementById(`${view}-container`).classList.remove("hidden");
+        document.getElementById("loading").classList.add('hidden');
       }
+      setActiveButton(view);
     };
+
   </script>
 </body>
 </html>
