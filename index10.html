@@ -1,305 +1,249 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEET PG Accountability Tracker</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
-  <style>
-    body { font-family: 'Poppins', sans-serif; background-color: #0f172a; }
-    .card { background-color: #0b1220; color: #e2e8f0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEET PG Accountability Tracker</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+    body { font-family: 'Poppins', sans-serif; background-color: #1a202c; }
+    .container { max-width: 900px; }
+    .card { background-color: #2d3748; color: #e2e8f0; }
+    .message-box { position: fixed; top: 20px; right: 20px; z-index: 1000; display: none; }
     .chart-container { position: relative; height: 400px; width: 100%; }
-    .message-box { position: fixed; top: 20px; right: 20px; z-index: 1000; }
-    .tab-btn.active { background-color: #1e40af; }
-    .tab-btn { transition: background-color 0.2s; }
-  </style>
+</style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
 
-  <div id="message-box" class="hidden"></div>
+<div id="message-box" class="message-box p-4 rounded-xl shadow-lg text-white"></div>
 
-  <div class="container max-w-3xl card p-8 rounded-2xl shadow-2xl flex flex-col items-center space-y-8 border border-gray-700">
+<div class="container card p-8 rounded-2xl shadow-2xl flex flex-col items-center space-y-8 border border-gray-700">
     <h1 class="text-3xl sm:text-4xl font-bold text-center text-white">NEET PG Accountability</h1>
-    <p class="text-xs text-gray-400">User ID: <span id="user-id" class="font-mono text-gray-200">...</span></p>
+    <p class="text-sm text-gray-400 text-center">User ID: <span id="user-id" class="font-mono text-xs text-gray-200">Initializing...</span></p>
 
-    <!-- Navigation -->
-    <div class="flex flex-wrap justify-center gap-2 w-full">
-      <button onclick="toggleView('log')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-blue-600 text-white active">Log Study</button>
-      <button onclick="toggleView('daily')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Daily</button>
-      <button onclick="toggleView('weekly')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Weekly</button>
-      <button onclick="toggleView('monthly')" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Monthly</button>
-      <button onclick="getMotivation()" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Motivation ✨</button>
-      <button onclick="getStudyTip()" class="tab-btn flex-1 py-2 px-4 rounded-lg bg-gray-600 text-white">Study Tip ✨</button>
+    <!-- Navigation Buttons -->
+    <div class="flex flex-wrap justify-center gap-4 w-full">
+        <button id="log-btn" onclick="toggleView('log')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-blue-600 text-white shadow-lg hover:bg-blue-700">Log Study</button>
+        <button id="daily-btn" onclick="toggleView('daily')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-gray-600 text-white shadow-lg hover:bg-gray-700">Daily</button>
+        <button id="weekly-btn" onclick="toggleView('weekly')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-gray-600 text-white shadow-lg hover:bg-gray-700">Weekly</button>
+        <button id="monthly-btn" onclick="toggleView('monthly')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-gray-600 text-white shadow-lg hover:bg-gray-700">Monthly</button>
     </div>
 
-    <!-- Input Form -->
-    <div id="form-view" class="w-full space-y-4">
-      <input type="text" id="name-input" placeholder="Your Name" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white" />
-      <input type="number" id="hours-input" step="0.1" placeholder="Hours Studied" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white" />
-      <input type="number" id="mcqs-input" placeholder="MCQs Solved" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white" />
-      <button onclick="logStudy()" class="w-full py-3 rounded-lg bg-blue-600 text-white font-bold">Submit</button>
+    <!-- Data Entry Form -->
+    <div id="form-view" class="w-full space-y-6">
+        <div class="space-y-2">
+            <label for="name-input" class="text-gray-200 font-medium">Your Name:</label>
+            <input type="text" id="name-input" placeholder="e.g., Friend A" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
+        </div>
+        <div class="space-y-2">
+            <label for="hours-input" class="text-gray-200 font-medium">Hours Studied:</label>
+            <input type="number" id="hours-input" placeholder="e.g., 6.5" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
+        </div>
+        <div class="space-y-2">
+            <label for="mcqs-input" class="text-gray-200 font-medium">MCQs Solved:</label>
+            <input type="number" id="mcqs-input" placeholder="e.g., 100" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
+        </div>
+        <button onclick="logStudy()" class="w-full py-4 px-6 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-colors">
+            Submit
+        </button>
     </div>
 
-    <!-- Charts -->
-    <div id="progress-view" class="w-full hidden flex flex-col space-y-6">
-      <div id="loading" class="text-gray-400 text-center">Loading data...</div>
+    <!-- Progress Graphs Container -->
+    <div id="progress-view" class="w-full hidden flex flex-col items-center space-y-4">
+        <div id="loading" class="text-gray-400 text-center">Loading chart data...</div>
 
-      <div class="chart-container card p-4 rounded-xl hidden" id="daily-container">
-        <h2 id="daily-chart-title" class="text-xl text-white mb-2 text-center">Daily Progress</h2>
-        <canvas id="dailyChart"></canvas>
-      </div>
-      <div class="chart-container card p-4 rounded-xl hidden" id="weekly-container">
-        <h2 id="weekly-chart-title" class="text-xl text-white mb-2 text-center">Weekly Progress</h2>
-        <canvas id="weeklyChart"></canvas>
-      </div>
-      <div class="chart-container card p-4 rounded-xl hidden" id="monthly-container">
-        <h2 id="monthly-chart-title" class="text-xl text-white mb-2 text-center">Monthly Progress</h2>
-        <canvas id="monthlyChart"></canvas>
-      </div>
+        <!-- Daily Chart -->
+        <div id="daily-chart-container" class="w-full hidden">
+            <h2 id="daily-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Daily Progress</h2>
+            <div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
+                <canvas id="progressChartDaily"></canvas>
+            </div>
+        </div>
+
+        <!-- Weekly Chart -->
+        <div id="weekly-chart-container" class="w-full hidden">
+            <h2 id="weekly-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Weekly Progress</h2>
+            <div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
+                <canvas id="progressChartWeekly"></canvas>
+            </div>
+        </div>
+
+        <!-- Monthly Chart -->
+        <div id="monthly-chart-container" class="w-full hidden">
+            <h2 id="monthly-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Monthly Progress</h2>
+            <div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
+                <canvas id="progressChartMonthly"></canvas>
+            </div>
+        </div>
     </div>
-     <!-- Gemini Output Container -->
-    <div id="gemini-output" class="w-full hidden card p-6 rounded-xl shadow-lg border border-gray-700">
-        <p id="gemini-content" class="text-gray-300 text-center text-sm"></p>
-    </div>
-  </div>
+</div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // ===== Helpers =====
-    const localISODate = (d) => d.toISOString().split("T")[0];
-    const todayISO = () => localISODate(new Date());
+// Firebase config
+const firebaseConfig = {
+    apiKey: "AIzaSyAWsR8Q7PalXP2Yo0D_62LH1y3a-lVRwNs",
+    authDomain: "neet-pg-accountability.firebaseapp.com",
+    projectId: "neet-pg-accountability",
+    storageBucket: "neet-pg-accountability.appspot.com",
+    messagingSenderId: "248678627903",
+    appId: "1:248678627903:web:f20558585e14b9e99c168a"
+};
 
-    const showMessage = (msg, type="info") => {
-      const box = document.getElementById("message-box");
-      box.textContent = msg;
-      box.className = `message-box p-3 rounded ${type==="success"?"bg-green-600":"bg-blue-600"} text-white`;
-      box.style.display = "block";
-      setTimeout(()=> box.style.display="none", 2000);
-    };
+setLogLevel('debug');
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+let userId = null;
+let unsubscribe = null;
 
-    const colorPalette = [
-      "#3b82f6","#f97316","#10b981","#ef4444","#8b5cf6","#06b6d4","#f59e0b",
-      "#14b8a6","#a855f7","#ec4899","#22c55e","#eab308","#0ea5e9","#f87171","#4ade80"
-    ];
-    const getColorForUser = (name) => {
-      let hash=0; for(let i=0;i<name.length;i++) hash=name.charCodeAt(i)+((hash<<5)-hash);
-      return colorPalette[Math.abs(hash)%colorPalette.length];
-    };
+// Message
+const messageBox = document.getElementById('message-box');
+const showMessage = (msg, type='info') => {
+    messageBox.textContent = msg;
+    messageBox.className = `message-box p-4 rounded-xl shadow-lg text-white ${type==='success'?'bg-green-500':'bg-red-500'}`;
+    messageBox.style.display='block';
+    setTimeout(()=>{messageBox.style.display='none';},3000);
+};
 
-    // ===== Firebase =====
-    const app = initializeApp({
-      apiKey: "AIzaSyAWsR8Q7PalXP2Yo0D_62LH1y3a-lVRwNs",
-      authDomain: "neet-pg-accountability.firebaseapp.com",
-      projectId: "neet-pg-accountability",
-      storageBucket: "neet-pg-accountability.appspot.com",
-      messagingSenderId: "248678627903",
-      appId: "1:248678627903:web:f20558585e14b9e99c168a"
-    });
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+// Log Study
+window.logStudy = async () => {
+    if(!auth.currentUser) { await signInAnonymously(auth); showMessage('Authenticating...', 'info'); return; }
+    const name = document.getElementById('name-input').value.trim().toLowerCase();
+    const hours = parseFloat(document.getElementById('hours-input').value);
+    const mcqs = parseInt(document.getElementById('mcqs-input').value);
+    if(!name || isNaN(hours) || isNaN(mcqs)) { showMessage('Fill all fields correctly!', 'error'); return; }
 
-    let logsCache = [];
-    let charts = {};
+    try {
+        await addDoc(collection(db, 'study_logs'), {
+            userId: auth.currentUser.uid,
+            name, hours, mcqs,
+            timestamp: serverTimestamp()
+        });
+        document.getElementById('hours-input').value='';
+        document.getElementById('mcqs-input').value='';
+        showMessage('Study logged!', 'success');
+    } catch(e) { console.error(e); showMessage('Error logging study', 'error'); }
+};
 
+// Realtime Listener & Auto Refresh on new day
+window.onload = () => {
     onAuthStateChanged(auth, user=>{
-      if(user){
-        document.getElementById("user-id").textContent=user.uid;
-        startRealtimeListener();
-      } else {
-        signInAnonymously(auth);
-      }
+        if(user) {
+            userId = user.uid;
+            document.getElementById('user-id').textContent = userId;
+            startRealtimeListener();
+        } else { showMessage('Auth failed', 'error'); }
+    });
+};
+
+let lastDay = new Date().getDate();
+function startRealtimeListener() {
+    if(unsubscribe) unsubscribe();
+    unsubscribe = onSnapshot(collection(db,'study_logs'), snapshot=>{
+        const logs = snapshot.docs.map(doc=>{
+            const data = doc.data();
+            if(data.timestamp?.toDate) data.timestamp = data.timestamp.toDate();
+            return data;
+        });
+        const today = new Date();
+        if(today.getDate() !== lastDay) { lastDay = today.getDate(); } // reset daily data on new day
+        updateCharts(logs);
+    });
+}
+
+// Chart update
+function updateCharts(logs){
+    const today = new Date();
+    const startOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(),1);
+
+    const daily={}, weekly={}, monthly={};
+    logs.forEach(log=>{
+        const d = new Date(log.timestamp);
+        // Daily
+        if(d.toDateString()===today.toDateString()){
+            if(!daily[log.name]) daily[log.name]={hours:0,mcqs:0};
+            daily[log.name].hours+=log.hours;
+            daily[log.name].mcqs+=log.mcqs;
+        }
+        // Weekly
+        if(d>=startOfWeek){
+            if(!weekly[log.name]) weekly[log.name]={hours:0,mcqs:0};
+            weekly[log.name].hours+=log.hours;
+            weekly[log.name].mcqs+=log.mcqs;
+        }
+        // Monthly
+        if(d>=startOfMonth){
+            if(!monthly[log.name]) monthly[log.name]={hours:0,mcqs:0};
+            monthly[log.name].hours+=log.hours;
+            monthly[log.name].mcqs+=log.mcqs;
+        }
     });
 
-    window.logStudy = async () => {
-      const name = document.getElementById("name-input").value.trim();
-      const hours = parseFloat(document.getElementById("hours-input").value);
-      const mcqs = parseInt(document.getElementById("mcqs-input").value);
+    renderChart('progressChartDaily', daily);
+    renderChart('progressChartWeekly', weekly);
+    renderChart('progressChartMonthly', monthly);
 
-      if(!name || isNaN(hours) || isNaN(mcqs)) return showMessage("Fill all fields","error");
+    document.getElementById('loading').classList.add('hidden');
+    toggleView('daily');
+}
 
-      const now = new Date();
-      const log = {
-        userId: auth.currentUser.uid,
-        name,
-        hours,
-        mcqs,
-        dateISO: localISODate(now),
-        timestampISO: now.toISOString(),
-        server_ts: serverTimestamp()
-      };
+// Chart rendering
+function renderChart(canvasId, data){
+    const canvas = document.getElementById(canvasId);
+    if(!canvas) return;
+    const existing = Chart.getChart(canvas);
+    if(existing) existing.destroy();
+    const ctx = canvas.getContext('2d');
+    const labels = Object.keys(data);
+    const hours = labels.map(l=>data[l].hours);
+    const mcqs = labels.map(l=>data[l].mcqs);
 
-      try {
-        await addDoc(collection(db,"study_logs"), log);
-        showMessage("Logged!","success");
-      } catch(e){ console.error(e); showMessage("Error","error"); }
-    };
-
-    const startRealtimeListener = () => {
-      const q = query(collection(db,"study_logs"));
-      onSnapshot(q,snap=>{
-        logsCache = snap.docs.map(d=>d.data());
-        updateCharts();
-      });
-    };
-
-    const updateCharts = () => {
-      const now = new Date();
-      const todayISO = localISODate(now);
-
-      const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate()-now.getDay());
-      const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(startOfWeek.getDate()+6);
-      const startOfMonth = new Date(now.getFullYear(),now.getMonth(),1);
-
-      const daily={}, weekly={}, monthly={};
-
-      logsCache.forEach(log=>{
-        const logDate = new Date(log.timestampISO||log.dateISO);
-        if(log.dateISO===todayISO){
-          (daily[log.name]??={hours:0,mcqs:0});
-          daily[log.name].hours+=log.hours; daily[log.name].mcqs+=log.mcqs;
-        }
-        if(logDate>=startOfWeek && logDate<=endOfWeek){
-          (weekly[log.name]??={hours:0,mcqs:0});
-          weekly[log.name].hours+=log.hours; weekly[log.name].mcqs+=log.mcqs;
-        }
-        if(logDate>=startOfMonth){
-          (monthly[log.name]??={hours:0,mcqs:0});
-          monthly[log.name].hours+=log.hours; monthly[log.name].mcqs+=log.mcqs;
-        }
-      });
-      
-      const dailyTitle = `Daily Progress (${new Date().toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})})`;
-      const weeklyTitle = `Weekly Progress (${startOfWeek.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})} - ${endOfWeek.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})})`;
-      const monthlyTitle = `Monthly Progress (${new Date().toLocaleDateString('en-US', {month: 'long', year: 'numeric'})})`;
-
-      document.getElementById('daily-chart-title').textContent = dailyTitle;
-      document.getElementById('weekly-chart-title').textContent = weeklyTitle;
-      document.getElementById('monthly-chart-title').textContent = monthlyTitle;
-
-      renderChart("dailyChart", daily);
-      renderChart("weeklyChart", weekly);
-      renderChart("monthlyChart", monthly);
-    };
-
-    const renderChart = (canvasId, dataObj) => {
-      const ctx = document.getElementById(canvasId);
-      if(charts[canvasId]) charts[canvasId].destroy();
-
-      const labels = Object.keys(dataObj);
-      const hours = labels.map(l=>dataObj[l].hours);
-      const mcqs = labels.map(l=>dataObj[l].mcqs);
-      const colors = labels.map(l=>getColorForUser(l));
-
-      charts[canvasId] = new Chart(ctx,{
-        type:"bar",
+    new Chart(ctx,{
+        type:'bar',
         data:{
-          labels,
-          datasets:[
-            { label:"Hours", data:hours, backgroundColor:colors, yAxisID:"y" },
-            { label:"MCQs", data:mcqs, type:"line", borderColor:"#f97316", tension:0.3, yAxisID:"y1" }
-          ]
+            labels,
+            datasets:[
+                {label:'Hours Studied', data:hours, backgroundColor:'rgba(59,130,246,0.8)', yAxisID:'y'},
+                {label:'MCQs Solved', data:mcqs, type:'line', borderColor:'rgb(249,115,22)', backgroundColor:'rgba(249,115,22,0.2)', fill:false, yAxisID:'y1'}
+            ]
         },
         options:{
-          responsive:true,
-          scales:{
-            y:{ beginAtZero:true },
-            y1:{ beginAtZero:true, position:"right" }
-          }
+            responsive:true,
+            maintainAspectRatio:false,
+            scales:{
+                y:{ beginAtZero:true, title:{ display:true, text:'Hours' } },
+                y1:{ beginAtZero:true, position:'right', grid:{ drawOnChartArea:false }, title:{ display:true, text:'MCQs' } }
+            },
+            plugins:{ legend:{ labels:{ color:'#e2e8f0' } }, tooltip:{ mode:'index', intersect:false } }
         }
-      });
-    };
-    
-    // ===== Gemini API Logic =====
-    const API_KEY = "AIzaSyBT8pI847BvkPnZP-W1Dcx-lSIhPdBco9E";
-    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
-    
-    const geminiOutput = document.getElementById('gemini-output');
-    const geminiContent = document.getElementById('gemini-content');
+    });
+}
 
-    async function generateContent(prompt) {
-        if (!API_KEY) {
-            showMessage("API Key is missing. Please add your key to the file.", "error");
-            return;
-        }
+// Toggle view
+window.toggleView = (type)=>{
+    const form=document.getElementById('form-view'), progress=document.getElementById('progress-view');
+    const dailyC=document.getElementById('daily-chart-container'), weeklyC=document.getElementById('weekly-chart-container'), monthlyC=document.getElementById('monthly-chart-container');
+    form.classList.add('hidden'); progress.classList.add('hidden');
+    dailyC.classList.add('hidden'); weeklyC.classList.add('hidden'); monthlyC.classList.add('hidden');
+    document.getElementById('log-btn').classList.remove('bg-blue-600'); document.getElementById('log-btn').classList.add('bg-gray-600');
+    document.getElementById('daily-btn').classList.remove('bg-blue-600'); document.getElementById('daily-btn').classList.add('bg-gray-600');
+    document.getElementById('weekly-btn').classList.remove('bg-blue-600'); document.getElementById('weekly-btn').classList.add('bg-gray-600');
+    document.getElementById('monthly-btn').classList.remove('bg-blue-600'); document.getElementById('monthly-btn').classList.add('bg-gray-600');
 
-        geminiOutput.classList.remove('hidden');
-        geminiContent.textContent = "Loading...";
-
-        try {
-            const payload = {
-                contents: [{ parts: [{ text: prompt }] }]
-            };
-
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error("API error:", errorData);
-                throw new Error(errorData.error.message || "API call failed.");
-            }
-
-            const result = await response.json();
-            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-            
-            geminiContent.textContent = text || "No content generated.";
-        } catch (error) {
-            console.error("Error generating content:", error);
-            geminiContent.textContent = "Error generating content. Please try again.";
-        }
+    if(type==='log'){ form.classList.remove('hidden'); document.getElementById('log-btn').classList.add('bg-blue-600'); }
+    else{ progress.classList.remove('hidden'); 
+        if(type==='daily'){ dailyC.classList.remove('hidden'); document.getElementById('daily-btn').classList.add('bg-blue-600'); }
+        if(type==='weekly'){ weeklyC.classList.remove('hidden'); document.getElementById('weekly-btn').classList.add('bg-blue-600'); }
+        if(type==='monthly'){ monthlyC.classList.remove('hidden'); document.getElementById('monthly-btn').classList.add('bg-blue-600'); }
     }
-
-    window.getMotivation = () => {
-        generateContent("Generate a short, powerful, and unique motivational quote for a medical student studying for an exam. Keep it under 20 words.");
-    };
-
-    window.getStudyTip = () => {
-        generateContent("Provide a concise and actionable study tip for a medical student preparing for the NEET PG exam. Keep it under 30 words.");
-    };
-
-    setInterval(updateCharts, 60000);
-
-    const setActiveButton = (view) => {
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active', 'bg-blue-600', 'text-white');
-        btn.classList.add('bg-gray-600', 'text-white');
-      });
-      const activeButton = document.querySelector(`[onclick="toggleView('${view}')"]`);
-      if (activeButton) {
-        activeButton.classList.add('active', 'bg-blue-600', 'text-white');
-        activeButton.classList.remove('bg-gray-600');
-      }
-    };
-
-    window.toggleView = (view) => {
-      document.getElementById("form-view").classList.add("hidden");
-      document.getElementById("progress-view").classList.remove("hidden");
-      document.getElementById("loading").classList.remove('hidden');
-      document.getElementById("gemini-output").classList.add('hidden');
-
-      ["daily-container","weekly-container","monthly-container"].forEach(id => {
-        document.getElementById(id).classList.add("hidden");
-      });
-
-      if(view==="log"){
-        document.getElementById("form-view").classList.remove("hidden");
-        document.getElementById("progress-view").classList.add("hidden");
-        document.getElementById("loading").classList.add('hidden');
-      } else {
-        document.getElementById(`${view}-container`).classList.remove("hidden");
-        document.getElementById("loading").classList.add('hidden');
-      }
-      setActiveButton(view);
-    };
-
-  </script>
+};
+</script>
 </body>
 </html>
