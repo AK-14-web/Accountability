@@ -10,13 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-    :root {
-        --color-primary: #1e40af;
-    }
-    body {
-        font-family: 'Poppins', sans-serif;
-        background-color: #1a202c;
-    }
+    body { font-family: 'Poppins', sans-serif; background-color: #1a202c; }
     .container { max-width: 900px; }
     .card { background-color: #2d3748; color: #e2e8f0; }
     .message-box { position: fixed; top: 20px; right: 20px; z-index: 1000; }
@@ -33,10 +27,10 @@
 
     <!-- Navigation Buttons -->
     <div class="flex flex-wrap justify-center gap-4 w-full">
-        <button id="log-btn" onclick="toggleView('log')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-blue-600 text-white shadow-lg hover:bg-blue-700">Log Study</button>
-        <button id="daily-progress-btn" onclick="toggleView('daily')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-gray-600 text-white shadow-lg hover:bg-gray-700">Daily</button>
-        <button id="weekly-progress-btn" onclick="toggleView('weekly')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-gray-600 text-white shadow-lg hover:bg-gray-700">Weekly</button>
-        <button id="monthly-progress-btn" onclick="toggleView('monthly')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-gray-600 text-white shadow-lg hover:bg-gray-700">Monthly</button>
+        <button id="log-btn" onclick="toggleView('log')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-blue-600 text-white shadow-lg hover:bg-blue-700">Log Study</button>
+        <button id="daily-progress-btn" onclick="toggleView('daily')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Daily</button>
+        <button id="weekly-progress-btn" onclick="toggleView('weekly')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Weekly</button>
+        <button id="monthly-progress-btn" onclick="toggleView('monthly')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Monthly</button>
     </div>
 
     <!-- Data Entry Form -->
@@ -85,195 +79,172 @@
     </div>
 </div>
 
-<!-- Firebase + Chart Logic -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Firebase config
-const localFirebaseConfig = {
+// CONFIGURATION
+const appId = 'default-app-id'; // for old logs you can temporarily use this
+const firebaseConfig = {
   apiKey: "AIzaSyAWsR8Q7PalXP2Yo0D_62LH1y3a-lVRwNs",
   authDomain: "neet-pg-accountability.firebaseapp.com",
+  databaseURL: "https://neet-pg-accountability-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "neet-pg-accountability",
   storageBucket: "neet-pg-accountability.appspot.com",
   messagingSenderId: "248678627903",
   appId: "1:248678627903:web:f20558585e14b9e99c168a"
 };
 
-const app = initializeApp(localFirebaseConfig);
+const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-setLogLevel('debug');
+
+let userId = null;
+let unsubscribe = null;
 
 const messageBox = document.getElementById('message-box');
 const showMessage = (msg, type='info') => {
     messageBox.textContent = msg;
     messageBox.className = `message-box p-4 rounded-xl shadow-lg text-white ${type==='success'?'bg-green-500':'bg-red-500'}`;
     messageBox.style.display = 'block';
-    setTimeout(()=>messageBox.style.display='none', 3000);
+    setTimeout(()=>{messageBox.style.display='none';},3000);
 };
 
-let userId = null;
-let unsubscribe = null;
-let charts = {daily:null, weekly:null, monthly:null};
+// AUTH
+onAuthStateChanged(auth, (user)=>{
+    if(user){
+        userId = user.uid;
+        document.getElementById('user-id').textContent = userId;
+        startRealtimeListener();
+    } else {
+        signInAnonymously(auth);
+    }
+});
 
-window.onload = async () => {
-    await signInAnonymously(auth);
-    onAuthStateChanged(auth, user => {
-        if (user) {
-            userId = user.uid;
-            document.getElementById('user-id').textContent = userId;
-            startRealtimeListener();
-        } else showMessage('Authentication failed','error');
-    });
-};
-
-// Log study
+// LOG STUDY
 window.logStudy = async () => {
-    if (!auth.currentUser) return showMessage('Authenticating user, try again', 'error');
-
+    if(!auth.currentUser) { signInAnonymously(auth); showMessage('Authenticating user, try again.'); return; }
     const hours = parseFloat(document.getElementById('hours-input').value);
-    const name = document.getElementById('name-input').value.trim().toLowerCase();
     const mcqs = parseInt(document.getElementById('mcqs-input').value);
-
-    if (!name || isNaN(hours) || isNaN(mcqs)) return showMessage('Please fill all fields correctly', 'error');
+    const name = document.getElementById('name-input').value.trim().toLowerCase();
+    if(!hours || !mcqs || !name) { showMessage('Fill all fields.', 'error'); return; }
 
     try {
-        await addDoc(collection(db, '/artifacts/default-app-id/public/data/study_logs'), {
-            userId,
-            name,
-            hours,
-            mcqs,
-            date: serverTimestamp(),
-            timestamp: new Date().toISOString()
+        const studyLogsRef = collection(db,'artifacts',appId,'public','data','study_logs');
+        await addDoc(studyLogsRef, {
+            userId, name, hours, mcqs, date: serverTimestamp(), timestamp: new Date().toISOString()
         });
-        document.getElementById('hours-input').value = '';
-        document.getElementById('mcqs-input').value = '';
-        showMessage('Study logged successfully', 'success');
-    } catch (e) {
-        console.error(e);
-        showMessage('Error logging study', 'error');
-    }
+        document.getElementById('hours-input').value='';
+        document.getElementById('mcqs-input').value='';
+        showMessage('Study logged successfully!', 'success');
+    } catch(e){ console.error(e); showMessage('Error logging study','error'); }
 };
 
-// Realtime listener
-const startRealtimeListener = () => {
-    if (unsubscribe) unsubscribe();
-
-    const q = collection(db, '/artifacts/default-app-id/public/data/study_logs');
-    unsubscribe = onSnapshot(q, snapshot => {
+// REALTIME LISTENER
+const startRealtimeListener = async () => {
+    if(!auth.currentUser || unsubscribe) return;
+    const studyLogsRef = collection(db,'artifacts',appId,'public','data','study_logs');
+    const q = query(studyLogsRef);
+    unsubscribe = onSnapshot(q, snapshot=>{
         const logs = [];
-        snapshot.forEach(doc => logs.push(doc.data()));
-        processLogs(logs);
-    }, err => {
-        console.error(err);
+        snapshot.forEach(doc=>logs.push(doc.data()));
+        updateCharts(logs);
+    }, error=>{
+        console.error(error);
         showMessage('Error fetching data','error');
     });
 };
 
-// Process logs
-const processLogs = (logs) => {
-    logs.forEach(log => {
-        let ts = log.timestamp || log.date || new Date();
-        if (ts.toDate) ts = ts.toDate();
-        else if (typeof ts==='string') ts = new Date(ts);
-        log.timestamp = ts;
-    });
+// CHARTS
+let dailyChart, weeklyChart, monthlyChart;
 
+const updateCharts = (logs)=>{
+    const todayISO = new Date().toISOString().slice(0,10);
+
+    const dailyData={}, weeklyData={}, monthlyData={};
     const now = new Date();
-    const todayStr = now.toISOString().slice(0,10);
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate()-now.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(),1);
 
-    const dailyData = {};
-    const weeklyData = {};
-    const monthlyData = {};
-
-    const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate() - now.getDay()); startOfWeek.setHours(0,0,0,0);
-    const startOfMonth = new Date(now); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
-
-    logs.forEach(log => {
-        const logDate = log.timestamp;
-        const name = log.name;
+    logs.forEach(log=>{
+        const logDate = log.timestamp ? new Date(log.timestamp) : new Date();
+        const dateISO = logDate.toISOString().slice(0,10);
 
         // Daily
-        if (logDate.toISOString().slice(0,10) === todayStr) {
-            if (!dailyData[name]) dailyData[name]={hours:0, mcqs:0};
-            dailyData[name].hours += log.hours;
-            dailyData[name].mcqs += log.mcqs;
+        if(dateISO===todayISO){
+            if(!dailyData[log.name]) dailyData[log.name]={hours:0, mcqs:0};
+            dailyData[log.name].hours+=log.hours;
+            dailyData[log.name].mcqs+=log.mcqs;
         }
 
         // Weekly
-        if (logDate >= startOfWeek) {
-            if (!weeklyData[name]) weeklyData[name]={hours:0, mcqs:0};
-            weeklyData[name].hours += log.hours;
-            weeklyData[name].mcqs += log.mcqs;
+        if(logDate>=startOfWeek && logDate<=now){
+            if(!weeklyData[log.name]) weeklyData[log.name]={hours:0, mcqs:0};
+            weeklyData[log.name].hours+=log.hours;
+            weeklyData[log.name].mcqs+=log.mcqs;
         }
 
         // Monthly
-        if (logDate >= startOfMonth) {
-            if (!monthlyData[name]) monthlyData[name]={hours:0, mcqs:0};
-            monthlyData[name].hours += log.hours;
-            monthlyData[name].mcqs += log.mcqs;
+        if(logDate>=startOfMonth){
+            if(!monthlyData[log.name]) monthlyData[log.name]={hours:0, mcqs:0};
+            monthlyData[log.name].hours+=log.hours;
+            monthlyData[log.name].mcqs+=log.mcqs;
         }
     });
 
     document.getElementById('loading').classList.add('hidden');
-    renderChart('progressChartDaily', dailyData, 'Hours Studied', 'MCQs Solved');
-    renderChart('progressChartWeekly', weeklyData, 'Hours Studied', 'MCQs Solved');
-    renderChart('progressChartMonthly', monthlyData, 'Hours Studied', 'MCQs Solved');
+    renderCombinedChart('progressChartDaily', dailyData, chart=>{dailyChart=chart;});
+    renderCombinedChart('progressChartWeekly', weeklyData, chart=>{weeklyChart=chart;});
+    renderCombinedChart('progressChartMonthly', monthlyData, chart=>{monthlyChart=chart;});
+
+    toggleView('daily');
 };
 
-// Render chart
-const renderChart = (canvasId, data, label1, label2) => {
+const renderCombinedChart = (canvasId, data, callback)=>{
     const ctx = document.getElementById(canvasId).getContext('2d');
-    if (charts[canvasId]) charts[canvasId].destroy();
-
+    const existingChart = Chart.getChart(ctx);
+    if(existingChart) existingChart.destroy();
     const labels = Object.keys(data);
     const hoursData = labels.map(l=>data[l].hours);
     const mcqsData = labels.map(l=>data[l].mcqs);
 
-    charts[canvasId] = new Chart(ctx, {
+    const chart = new Chart(ctx,{
         type:'bar',
         data:{
             labels,
             datasets:[
-                {label: label1, data: hoursData, backgroundColor:'rgba(59,130,246,0.8)', yAxisID:'y'},
-                {label: label2, data: mcqsData, type:'line', borderColor:'rgb(249,115,22)', backgroundColor:'rgba(249,115,22,0.2)', yAxisID:'y1', fill:false}
+                { label:'Hours Studied', data:hoursData, backgroundColor:'rgba(59,130,246,0.8)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:10, yAxisID:'y' },
+                { label:'MCQs Solved', data:mcqsData, type:'line', borderColor:'rgb(249,115,22)', backgroundColor:'rgba(249,115,22,0.2)', fill:false, yAxisID:'y1' }
             ]
         },
         options:{
             responsive:true, maintainAspectRatio:false,
             scales:{
-                y:{type:'linear', position:'left', beginAtZero:true, title:{display:true,text:label1}},
-                y1:{type:'linear', position:'right', beginAtZero:true, title:{display:true,text:label2}, grid:{drawOnChartArea:false}}
+                y:{type:'linear', display:true, position:'left', title:{display:true,text:'Hours'}, beginAtZero:true},
+                y1:{type:'linear', display:true, position:'right', title:{display:true,text:'MCQs'}, grid:{drawOnChartArea:false}, beginAtZero:true}
             },
-            plugins:{legend:{display:true, labels:{color:'#e2e8f0'}}}
+            plugins:{legend:{display:true, position:'top', labels:{color:'#e2e8f0'}}, tooltip:{mode:'index', intersect:false}}
         }
     });
+    callback(chart);
 };
 
-// Toggle view
-window.toggleView = (view) => {
-    const form = document.getElementById('form-view');
-    const progress = document.getElementById('progress-view');
-    const dailyC = document.getElementById('daily-chart-container');
-    const weeklyC = document.getElementById('weekly-chart-container');
-    const monthlyC = document.getElementById('monthly-chart-container');
+// VIEW TOGGLE
+window.toggleView = (viewType)=>{
+    const form=document.getElementById('form-view');
+    const progress=document.getElementById('progress-view');
+    const daily=document.getElementById('daily-chart-container');
+    const weekly=document.getElementById('weekly-chart-container');
+    const monthly=document.getElementById('monthly-chart-container');
 
-    if(view==='log'){ form.classList.remove('hidden'); progress.classList.add('hidden'); }
-    else{ form.classList.add('hidden'); progress.classList.remove('hidden'); }
+    if(viewType==='log'){ form.classList.remove('hidden'); progress.classList.add('hidden'); }
+    else { form.classList.add('hidden'); progress.classList.remove('hidden'); }
 
-    dailyC.classList.add('hidden'); weeklyC.classList.add('hidden'); monthlyC.classList.add('hidden');
-    if(view==='daily') dailyC.classList.remove('hidden');
-    if(view==='weekly') weeklyC.classList.remove('hidden');
-    if(view==='monthly') monthlyC.classList.remove('hidden');
+    daily.classList.toggle('hidden', viewType!=='daily');
+    weekly.classList.toggle('hidden', viewType!=='weekly');
+    monthly.classList.toggle('hidden', viewType!=='monthly');
 };
-
-// Auto-refresh daily at midnight
-const now = new Date();
-const msToMidnight = (new Date(now.getFullYear(), now.getMonth(), now.getDate()+1,0,0,0)-now);
-setTimeout(() => { startRealtimeListener(); setInterval(startRealtimeListener,24*60*60*1000); }, msToMidnight);
-
 </script>
 </body>
 </html>
