@@ -1,157 +1,220 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Study Tracker</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    .chart-container { width: 80%; margin: 20px auto; }
-  </style>
-</head>
-<body>
-  <h2>📊 Study Accountability Tracker</h2>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+  import { getFirestore, collection, addDoc, query, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
-  <div>
-    <input id="nameInput" placeholder="Your name" />
-    <input id="minutesInput" type="number" placeholder="Minutes studied" />
-    <button onclick="addLog()">Log Study</button>
-  </div>
-
-  <div class="chart-container">
-    <canvas id="dailyChart"></canvas>
-  </div>
-  <div class="chart-container">
-    <canvas id="compareChart"></canvas>
-  </div>
-  <div class="chart-container">
-    <canvas id="monthlyChart"></canvas>
-  </div>
-
-  <script>
-    // 🔥 Firebase setup
-    const firebaseConfig = {
-      apiKey: "AIzaSyAWsR8Q7PalXP2Yo0D_62LH1y3a-lVRwNs",
+  const firebaseConfig = {
+  apiKey: "AIzaSyAWsR8Q7PalXP2Yo0D_62LH1y3a-lVRwNs",
   authDomain: "neet-pg-accountability.firebaseapp.com",
+  databaseURL: "https://neet-pg-accountability-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "neet-pg-accountability",
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+  storageBucket: "neet-pg-accountability.firebasestorage.app",
+  messagingSenderId: "248678627903",
+  appId: "1:248678627903:web:f20558585e14b9e99c168a"
+};
 
-    // 🎨 Deterministic HSL color per user
-    function getColorForUser(username) {
-      let hash = 0;
-      for (let i = 0; i < username.length; i++) {
-        hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  let logsCache = [];
+  let lastRenderedDate = null;
+
+  // 🎨 Unique deterministic HSL color per user
+  const getColorForUser = (username) => {
+    let hash = 0;
+    for (let i = 0; i < username.length; i++) {
+      hash = username.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash % 360);
+    return `hsl(${hue}, 70%, 50%)`;
+  };
+
+  // Sign in anonymous
+  signInAnonymously(auth).catch(console.error);
+
+  // Save log
+  const form = document.getElementById('log-form');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('name-input').value.trim();
+    const hours = parseFloat(document.getElementById('hours-input').value) || 0;
+    const mcqs = parseInt(document.getElementById('mcqs-input').value) || 0;
+
+    if (!name) return alert("Enter your name!");
+
+    // Save name to localStorage
+    localStorage.setItem("username", name);
+
+    // Today's date string
+    const todayISO = new Date().toISOString().split('T')[0];
+
+    try {
+      await addDoc(collection(db, "study_logs"), {
+        name: name,
+        hours: hours,
+        mcqs: mcqs,
+        dateISO: todayISO,
+        timestampISO: new Date().toISOString()
+      });
+
+      document.getElementById('hours-input').value = '';
+      document.getElementById('mcqs-input').value = '';
+    } catch (err) {
+      console.error("Error adding log:", err);
+    }
+  });
+
+  // Prefill saved name
+  const savedName = localStorage.getItem("username");
+  if (savedName) document.getElementById('name-input').value = savedName;
+
+  // Listen to logs
+  const logsQuery = query(collection(db, "study_logs"), orderBy("timestampISO", "desc"));
+  onSnapshot(logsQuery, (snapshot) => {
+    logsCache = snapshot.docs.map(doc => doc.data());
+    renderAggregatedCharts(logsCache);
+  });
+
+  // Render charts
+  function renderAggregatedCharts(logs) {
+    const todayDateISO = new Date().toISOString().split('T')[0];
+    const yesterdayISO = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    // --- DAILY ---
+    const dailyData = {};
+    logs.forEach(log => {
+      const logDateISO = log.dateISO || (log.timestampISO ? log.timestampISO.split('T')[0] : null);
+      if (logDateISO === todayDateISO) {
+        if (!dailyData[log.name]) dailyData[log.name] = { hours: 0, mcqs: 0 };
+        dailyData[log.name].hours += log.hours;
+        dailyData[log.name].mcqs += log.mcqs;
       }
-      const hue = Math.abs(hash % 360);
-      return `hsl(${hue}, 70%, 50%)`;
+    });
+    renderCombinedChart(dailyData, 'daily-chart', 'Daily Progress');
+
+    // --- WEEKLY ---
+    const weeklyData = {};
+    const now = new Date();
+    logs.forEach(log => {
+      const logDateISO = log.dateISO || (log.timestampISO ? log.timestampISO.split('T')[0] : null);
+      if (logDateISO) {
+        const logDate = new Date(logDateISO);
+        const diffDays = (now - logDate) / (1000 * 60 * 60 * 24);
+        if (diffDays <= 7) {
+          if (!weeklyData[log.name]) weeklyData[log.name] = { hours: 0, mcqs: 0 };
+          weeklyData[log.name].hours += log.hours;
+          weeklyData[log.name].mcqs += log.mcqs;
+        }
+      }
+    });
+    renderCombinedChart(weeklyData, 'weekly-chart', 'Weekly Progress');
+    renderLeaderboard(weeklyData);
+
+    // --- MONTHLY ---
+    const monthlyData = {};
+    logs.forEach(log => {
+      const logDateISO = log.dateISO || (log.timestampISO ? log.timestampISO.split('T')[0] : null);
+      if (logDateISO) {
+        const logDate = new Date(logDateISO);
+        const diffDays = (now - logDate) / (1000 * 60 * 60 * 24);
+        if (diffDays <= 30) {
+          if (!monthlyData[log.name]) monthlyData[log.name] = { hours: 0, mcqs: 0 };
+          monthlyData[log.name].hours += log.hours;
+          monthlyData[log.name].mcqs += log.mcqs;
+        }
+      }
+    });
+    renderCombinedChart(monthlyData, 'monthly-chart', 'Monthly Progress');
+
+    // Monthly Averages
+    const avgTable = document.getElementById("monthly-averages");
+    if (avgTable) avgTable.remove(); // reset
+    const table = document.createElement("table");
+    table.id = "monthly-averages";
+    table.className = "mt-4 w-full text-sm text-gray-200";
+    let html = "<tr><th>Name</th><th>Avg Hours/Day</th><th>Avg MCQs/Day</th></tr>";
+    for (let name in monthlyData) {
+      const avgHours = (monthlyData[name].hours / 30).toFixed(1);
+      const avgMcqs = (monthlyData[name].mcqs / 30).toFixed(0);
+      html += `<tr><td>${name}</td><td>${avgHours}</td><td>${avgMcqs}</td></tr>`;
     }
+    table.innerHTML = html;
+    document.getElementById("monthly-chart").parentElement.appendChild(table);
+  }
 
-    // ✍️ Add study log
-    async function addLog() {
-      const name = document.getElementById("nameInput").value.trim();
-      const minutes = parseInt(document.getElementById("minutesInput").value);
-      if (!name || !minutes) return;
-      await db.collection("studyLogs").add({
-        name,
-        minutes,
-        timestamp: new Date(),
-      });
-      document.getElementById("minutesInput").value = "";
-    }
+  // Render chart function
+  function renderCombinedChart(data, canvasId, label) {
+    const ctx = document.getElementById(canvasId)?.getContext('2d');
+    if (!ctx) return;
 
-    // 📊 Charts
-    let dailyChart, compareChart, monthlyChart;
-    let logsCache = [];
-    let currentDay = new Date().toLocaleDateString();
+    const labels = Object.keys(data);
+    const hoursData = labels.map(name => data[name].hours);
+    const mcqsData = labels.map(name => data[name].mcqs);
 
-    function renderCharts(logs) {
-      const today = new Date().toLocaleDateString();
-      const yesterday = new Date(Date.now() - 86400000).toLocaleDateString();
+    if (ctx.chart) ctx.chart.destroy();
 
-      let dailyData = {}, yesterdayData = {}, monthlyData = {};
-
-      logs.forEach(log => {
-        const date = log.timestamp.toDate().toLocaleDateString();
-        const name = log.name;
-        if (date === today) {
-          dailyData[name] = (dailyData[name] || 0) + log.minutes;
+    ctx.chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Hours',
+            data: hoursData,
+            backgroundColor: labels.map(name => getColorForUser(name)),
+            borderRadius: 8,
+            yAxisID: 'y',
+          },
+          {
+            label: 'MCQs',
+            data: mcqsData,
+            type: 'line',
+            borderColor: "#facc15",
+            backgroundColor: "#facc15",
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: "#ddd" } } },
+        scales: {
+          x: { ticks: { color: "#ddd" } },
+          y: { ticks: { color: "#ddd" }, beginAtZero: true, position: 'left' },
+          y1: { ticks: { color: "#ddd" }, beginAtZero: true, position: 'right' }
         }
-        if (date === yesterday) {
-          yesterdayData[name] = (yesterdayData[name] || 0) + log.minutes;
-        }
-        const month = log.timestamp.toDate().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        monthlyData[name] = (monthlyData[name] || 0) + log.minutes;
-      });
+      }
+    });
+  }
 
-      // Destroy old charts before re-render
-      if (dailyChart) dailyChart.destroy();
-      if (compareChart) compareChart.destroy();
-      if (monthlyChart) monthlyChart.destroy();
+  // 🏆 Leaderboard (weekly hours ranking)
+  function renderLeaderboard(weeklyData) {
+    const old = document.getElementById("leaderboard");
+    if (old) old.remove();
 
-      // Daily
-      dailyChart = new Chart(document.getElementById("dailyChart"), {
-        type: "bar",
-        data: {
-          labels: Object.keys(dailyData),
-          datasets: [{
-            label: "Minutes studied today",
-            data: Object.values(dailyData),
-            backgroundColor: Object.keys(dailyData).map(u => getColorForUser(u)),
-          }]
-        }
-      });
+    const sorted = Object.entries(weeklyData)
+      .sort((a, b) => b[1].hours - a[1].hours);
 
-      // Compare Yesterday vs Today
-      compareChart = new Chart(document.getElementById("compareChart"), {
-        type: "bar",
-        data: {
-          labels: Array.from(new Set([...Object.keys(dailyData), ...Object.keys(yesterdayData)])),
-          datasets: [
-            {
-              label: "Yesterday",
-              data: Object.keys(dailyData).map(u => yesterdayData[u] || 0),
-              backgroundColor: "rgba(200,0,0,0.6)"
-            },
-            {
-              label: "Today",
-              data: Object.keys(dailyData).map(u => dailyData[u] || 0),
-              backgroundColor: "rgba(0,200,0,0.6)"
-            }
-          ]
-        }
-      });
+    const table = document.createElement("table");
+    table.id = "leaderboard";
+    table.className = "mt-4 w-full text-sm text-gray-200 border";
 
-      // Monthly
-      monthlyChart = new Chart(document.getElementById("monthlyChart"), {
-        type: "bar",
-        data: {
-          labels: Object.keys(monthlyData),
-          datasets: [{
-            label: "Monthly total minutes",
-            data: Object.values(monthlyData),
-            backgroundColor: Object.keys(monthlyData).map(u => getColorForUser(u)),
-          }]
-        }
-      });
-    }
-
-    // 🔄 Listen to Firestore
-    db.collection("studyLogs").orderBy("timestamp").onSnapshot(snapshot => {
-      logsCache = snapshot.docs.map(doc => doc.data());
-      renderCharts(logsCache);
+    let html = "<tr><th>Rank</th><th>Name</th><th>Total Hours</th><th>Total MCQs</th></tr>";
+    sorted.forEach(([name, stats], index) => {
+      html += `<tr><td>${index + 1}</td><td>${name}</td><td>${stats.hours}</td><td>${stats.mcqs}</td></tr>`;
     });
 
-    // ⏰ Force daily refresh at midnight
-    setInterval(() => {
-      const today = new Date().toLocaleDateString();
-      if (today !== currentDay) {
-        currentDay = today;
-        renderCharts(logsCache);
-      }
-    }, 10000); // check every 10s
-  </script>
-</body>
-</html>
+    table.innerHTML = html;
+    document.getElementById("weekly-chart").parentElement.appendChild(table);
+  }
+
+  // ⏰ Midnight reset (check every 30s)
+  setInterval(() => {
+    const todayDateISO = new Date().toISOString().split('T')[0];
+    if (lastRenderedDate !== todayDateISO) {
+      lastRenderedDate = todayDateISO;
+      renderAggregatedCharts(logsCache);
+    }
+  }, 30000);
+</script>
