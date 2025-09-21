@@ -127,12 +127,10 @@
             const userId = auth.currentUser.uid;
 
             const hours = document.getElementById('hours-input').value;
-            const topics = document.getElementById('topics-input').value;
             const name = document.getElementById('name-input').value;
             const mcqs = document.getElementById('mcqs-input').value;
-            const exercise = document.getElementById('exercise-input').value;
 
-            if (hours === '' || topics === '' || name === '' || mcqs === '' || exercise === '') {
+            if (hours === '' || name === '' || mcqs === '') {
                 showMessage('Please fill in all fields.', 'error');
                 return;
             }
@@ -152,9 +150,7 @@
                 userId: userId,
                 name: normalizedName,
                 hours: parseFloat(hours),
-                topics: topics,
                 mcqs: parseInt(mcqs),
-                exercise: exercise,
                 date: serverTimestamp(),
                 timestamp: new Date().toISOString()
             };
@@ -165,9 +161,7 @@
             try {
                 await addDoc(studyLogsRef, studyData);
                 document.getElementById('hours-input').value = '';
-                document.getElementById('topics-input').value = '';
                 document.getElementById('mcqs-input').value = '';
-                document.getElementById('exercise-input').value = '';
                 showMessage('Study logged successfully!', 'success');
             } catch (e) {
                 console.error("Error adding document: ", e);
@@ -430,14 +424,6 @@
                 <label for="mcqs-input" class="text-gray-700 font-medium">MCQs Solved:</label>
                 <input type="number" id="mcqs-input" placeholder="e.g., 100" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
-            <div class="space-y-2">
-                <label for="exercise-input" class="text-gray-700 font-medium">Exercise:</label>
-                <input type="text" id="exercise-input" placeholder="e.g., 30 min run" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div class="space-y-2">
-                <label for="topics-input" class="text-gray-700 font-medium">Topics Covered:</label>
-                <textarea id="topics-input" rows="3" placeholder="e.g., Anatomy, Pathology" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-            </div>
             <button onclick="logStudy()" class="w-full py-4 px-6 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-colors">
                 Submit
             </button>
@@ -475,3 +461,4 @@
     </div>
 </body>
 </html>
+
