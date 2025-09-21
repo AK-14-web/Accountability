@@ -10,244 +10,223 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-    :root {
-        --color-primary: #1e40af;
-        --color-secondary: #f97316;
-    }
-    body {
-        font-family: 'Poppins', sans-serif;
-        background-color: #1a202c;
-    }
-    .container {
-        max-width: 900px;
-    }
-    .card {
-        background-color: #2d3748;
-        color: #e2e8f0;
-    }
-    .message-box {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 1000;
-        display: none;
-    }
-    .chart-container {
-        position: relative;
-        height: 400px;
-        width: 100%;
-    }
+body { font-family:'Poppins',sans-serif; background-color:#1a202c; }
+.container { max-width:900px; }
+.card { background-color:#2d3748; color:#e2e8f0; }
+.message-box { position:fixed; top:20px; right:20px; z-index:1000; }
+.chart-container { position:relative; height:400px; width:100%; }
 </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-10 px-4">
 
-<!-- Firebase SDKs -->
+<div id="message-box" class="hidden"></div>
+
+<div class="container card p-8 rounded-2xl shadow-2xl flex flex-col items-center space-y-8 border border-gray-700">
+<h1 class="text-3xl sm:text-4xl font-bold text-center text-white">NEET PG Accountability</h1>
+<p class="text-sm text-gray-400 text-center">User ID: <span id="user-id" class="font-mono text-xs text-gray-200">Initializing...</span></p>
+
+<!-- Navigation Buttons -->
+<div class="flex flex-wrap justify-center gap-4 w-full">
+<button id="log-btn" onclick="toggleView('log')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-blue-600 text-white shadow-lg hover:bg-blue-700">Log Study</button>
+<button id="daily-progress-btn" onclick="toggleView('daily')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Daily</button>
+<button id="weekly-progress-btn" onclick="toggleView('weekly')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Weekly</button>
+<button id="monthly-progress-btn" onclick="toggleView('monthly')" class="flex-1 py-3 px-6 rounded-xl font-bold transition-colors bg-gray-600 text-white shadow-lg hover:bg-gray-700">Monthly</button>
+</div>
+
+<!-- Data Entry Form -->
+<div id="form-view" class="w-full space-y-6">
+<div class="space-y-2">
+<label for="name-input" class="text-gray-200 font-medium">Your Name:</label>
+<input type="text" id="name-input" placeholder="e.g., Friend A" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
+</div>
+<div class="space-y-2">
+<label for="hours-input" class="text-gray-200 font-medium">Hours Studied:</label>
+<input type="number" id="hours-input" placeholder="e.g., 6.5" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
+</div>
+<div class="space-y-2">
+<label for="mcqs-input" class="text-gray-200 font-medium">MCQs Solved:</label>
+<input type="number" id="mcqs-input" placeholder="e.g., 100" class="w-full p-3 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white">
+</div>
+<button onclick="logStudy()" class="w-full py-4 px-6 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg hover:bg-blue-700 transition-colors">
+Submit
+</button>
+</div>
+
+<!-- Progress Graphs Container -->
+<div id="progress-view" class="w-full hidden flex flex-col items-center space-y-4">
+<div id="loading" class="text-gray-400 text-center">Loading chart data...</div>
+
+<div id="daily-chart-container" class="w-full hidden">
+<h2 id="daily-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Daily Progress</h2>
+<div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
+<canvas id="progressChartDaily"></canvas>
+</div>
+</div>
+
+<div id="weekly-chart-container" class="w-full hidden">
+<h2 id="weekly-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Weekly Progress</h2>
+<div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
+<canvas id="progressChartWeekly"></canvas>
+</div>
+</div>
+
+<div id="monthly-chart-container" class="w-full hidden">
+<h2 id="monthly-chart-title" class="text-2xl font-semibold text-white text-center mb-4">Monthly Progress</h2>
+<div class="chart-container card border border-gray-700 p-4 rounded-xl shadow-inner">
+<canvas id="progressChartMonthly"></canvas>
+</div>
+</div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// CONFIG - Replace with your own Firebase config
-const firebaseConfig = {
+const localFirebaseConfig = {
   apiKey: "AIzaSyAWsR8Q7PalXP2Yo0D_62LH1y3a-lVRwNs",
   authDomain: "neet-pg-accountability.firebaseapp.com",
+  databaseURL: "https://neet-pg-accountability-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "neet-pg-accountability",
-  storageBucket: "neet-pg-accountability.appspot.com",
+  storageBucket: "neet-pg-accountability.firebasestorage.app",
   messagingSenderId: "248678627903",
   appId: "1:248678627903:web:f20558585e14b9e99c168a"
 };
-const app = initializeApp(firebaseConfig);
+
+const app = initializeApp(localFirebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 let userId = null;
 let unsubscribe = null;
 
 const messageBox = document.getElementById('message-box');
-const showMessage = (msg, type='info') => {
+const showMessage = (msg, type='info')=>{
     messageBox.textContent = msg;
     messageBox.className = `message-box p-4 rounded-xl shadow-lg text-white ${type==='success'?'bg-green-500':'bg-red-500'}`;
     messageBox.style.display='block';
-    setTimeout(()=>{messageBox.style.display='none';}, 3000);
+    setTimeout(()=>{messageBox.style.display='none';},3000);
 };
 
-// AUTH
-window.onload = async () => {
-    setLogLevel('debug');
-    try {
-        await signInAnonymously(auth);
-    } catch(e) {
-        console.error(e);
-        showMessage('Authentication failed', 'error');
-    }
+window.logStudy = async ()=>{
+    if(!auth.currentUser){ await signInAnonymously(auth); return showMessage('Authenticating user, try again.','info'); }
+    const uid = auth.currentUser.uid;
+    const hours = document.getElementById('hours-input').value;
+    const name = document.getElementById('name-input').value;
+    const mcqs = document.getElementById('mcqs-input').value;
 
-    onAuthStateChanged(auth, user=>{
-        if(user){
-            userId = user.uid;
-            document.getElementById('user-id').textContent = userId;
-            startRealtimeListener();
-            setupDailyRefresh();
-        }
-    });
-};
+    if(hours===''||name===''||mcqs===''){ return showMessage('Fill all fields','error'); }
+    if(isNaN(parseFloat(hours))||isNaN(parseInt(mcqs))){ return showMessage('Hours/MCQs must be numbers','error'); }
 
-// LOG STUDY
-window.logStudy = async () => {
-    const nameInput = document.getElementById('name-input').value.trim().toLowerCase();
-    const hoursInput = parseFloat(document.getElementById('hours-input').value);
-    const mcqsInput = parseInt(document.getElementById('mcqs-input').value);
-
-    if(!nameInput || isNaN(hoursInput) || isNaN(mcqsInput)){
-        showMessage('Please fill in all fields correctly.', 'error');
-        return;
-    }
-
-    const data = { userId, name: nameInput, hours: hoursInput, mcqs: mcqsInput, timestamp: serverTimestamp() };
     try{
-        const ref = collection(db, 'study_logs');
-        await addDoc(ref, data);
+        const docRef = await addDoc(collection(db, 'study_logs'),{
+            userId: uid,
+            name: name.trim(),
+            hours: parseFloat(hours),
+            mcqs: parseInt(mcqs),
+            timestamp: serverTimestamp()
+        });
         document.getElementById('hours-input').value='';
         document.getElementById('mcqs-input').value='';
-        showMessage('Study logged successfully!', 'success');
-    }catch(e){
-        console.error(e);
-        showMessage('Error logging study', 'error');
-    }
+        showMessage('Study logged successfully!','success');
+    }catch(e){ console.error(e); showMessage('Error logging study','error'); }
 };
 
-// CHARTS
-let dailyChart=null, weeklyChart=null, monthlyChart=null;
-
-const startRealtimeListener = () => {
-    const studyLogsRef = collection(db, 'study_logs');
-    unsubscribe = onSnapshot(studyLogsRef, snapshot=>{
-        const logs = snapshot.docs.map(doc=>doc.data());
-        updateCharts(logs);
-    }, err=>{
-        console.error(err);
-        showMessage('Error loading study logs', 'error');
-    });
-};
-
-// Update charts
-const updateCharts = (logs) => {
-    const today = new Date();
-    const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - today.getDay());
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-    const dailyData={}, weeklyData={}, monthlyData={};
+const processLogs = (logs)=>{
+    const daily={}, weekly={}, monthly={};
+    const now = new Date(), todayYMD = now.getFullYear()+'-'+now.getMonth()+'-'+now.getDate();
+    const startOfWeek = new Date(now.getFullYear(),now.getMonth(), now.getDate()-now.getDay());
+    const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(startOfWeek.getDate()+6);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(),1);
 
     logs.forEach(log=>{
-        if(!log.timestamp) return;
-        const date = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
-        const name = log.name;
+        const d = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
+        const ymd = d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate();
+        const n = log.name;
+        if(!daily[n]) daily[n]={hours:0, mcqs:0};
+        if(!weekly[n]) weekly[n]={hours:0, mcqs:0};
+        if(!monthly[n]) monthly[n]={hours:0, mcqs:0};
 
-        // Daily
-        if(date.getFullYear()===today.getFullYear() && date.getMonth()===today.getMonth() && date.getDate()===today.getDate()){
-            if(!dailyData[name]) dailyData[name]={hours:0,mcqs:0};
-            dailyData[name].hours += log.hours;
-            dailyData[name].mcqs += log.mcqs;
-        }
-
-        // Weekly
-        if(date >= startOfWeek){
-            if(!weeklyData[name]) weeklyData[name]={hours:0,mcqs:0};
-            weeklyData[name].hours += log.hours;
-            weeklyData[name].mcqs += log.mcqs;
-        }
-
-        // Monthly
-        if(date >= startOfMonth){
-            if(!monthlyData[name]) monthlyData[name]={hours:0,mcqs:0};
-            monthlyData[name].hours += log.hours;
-            monthlyData[name].mcqs += log.mcqs;
-        }
+        if(ymd===todayYMD){ daily[n].hours+=log.hours; daily[n].mcqs+=log.mcqs; }
+        if(d>=startOfWeek && d<=endOfWeek){ weekly[n].hours+=log.hours; weekly[n].mcqs+=log.mcqs; }
+        if(d>=startOfMonth){ monthly[n].hours+=log.hours; monthly[n].mcqs+=log.mcqs; }
     });
-
-    renderChart('progressChartDaily', dailyData, 'Daily Progress');
-    renderChart('progressChartWeekly', weeklyData, 'Weekly Progress');
-    renderChart('progressChartMonthly', monthlyData, 'Monthly Progress');
-
-    document.getElementById('daily-chart-container').classList.remove('hidden');
+    return {daily, weekly, monthly};
 };
 
-const renderChart = (canvasId, data, title) => {
+let charts={};
+const renderChart=(canvasId,data)=>{
     const ctx = document.getElementById(canvasId).getContext('2d');
-    let existing = Chart.getChart(ctx);
-    if(existing) existing.destroy();
+    if(charts[canvasId]) charts[canvasId].destroy();
 
     const labels = Object.keys(data);
     const hoursData = labels.map(l=>data[l].hours);
     const mcqsData = labels.map(l=>data[l].mcqs);
 
-    new Chart(ctx,{
+    charts[canvasId]=new Chart(ctx,{
         type:'bar',
         data:{
-            labels,
+            labels:labels,
             datasets:[
-                { label:'Hours', data:hoursData, backgroundColor:'rgba(59,130,246,0.8)', yAxisID:'y', borderRadius:10 },
-                { label:'MCQs', data:mcqsData, type:'line', borderColor:'rgb(249,115,22)', backgroundColor:'rgba(249,115,22,0.2)', yAxisID:'y1', fill:false }
+                {label:'Hours', data:hoursData, backgroundColor:'rgba(59,130,246,0.8)', borderColor:'rgba(59,130,246,1)', borderWidth:1, borderRadius:10, yAxisID:'y'},
+                {label:'MCQs', data:mcqsData, type:'line', borderColor:'rgb(249,115,22)', backgroundColor:'rgba(249,115,22,0.2)', fill:false, yAxisID:'y1'}
             ]
         },
         options:{
             responsive:true,
             maintainAspectRatio:false,
             scales:{
-                y:{ type:'linear', position:'left', beginAtZero:true, title:{display:true,text:'Hours'} },
-                y1:{ type:'linear', position:'right', beginAtZero:true, title:{display:true,text:'MCQs'}, grid:{drawOnChartArea:false} }
+                y:{type:'linear', display:true, position:'left', beginAtZero:true, title:{display:true,text:'Hours'}},
+                y1:{type:'linear', display:true, position:'right', beginAtZero:true, title:{display:true,text:'MCQs'}, grid:{drawOnChartArea:false}}
             },
-            plugins:{
-                legend:{labels:{color:'#e2e8f0'}},
-                tooltip:{mode:'index',intersect:false}
-            }
+            plugins:{legend:{labels:{color:'#e2e8f0'}}, tooltip:{mode:'index', intersect:false}}
         }
     });
 };
 
-// VIEW TOGGLE
-window.toggleView = (viewType)=>{
-    const form=document.getElementById('form-view');
-    const progress=document.getElementById('progress-view');
-    if(viewType==='log'){ form.classList.remove('hidden'); progress.classList.add('hidden'); }
-    else{ form.classList.add('hidden'); progress.classList.remove('hidden'); }
+const startRealtimeListener=()=>{
+    const q = query(collection(db,'study_logs'));
+    if(unsubscribe) unsubscribe();
+    unsubscribe = onSnapshot(q,snap=>{
+        const logs=[];
+        snap.forEach(doc=>logs.push(doc.data()));
+        const {daily, weekly, monthly} = processLogs(logs);
+        document.getElementById('loading').classList.add('hidden');
+        renderChart('progressChartDaily',daily);
+        renderChart('progressChartWeekly',weekly);
+        renderChart('progressChartMonthly',monthly);
+    }, err=>showMessage('Error fetching data','error'));
 };
 
-// DAILY REFRESH at midnight
-const setupDailyRefresh = () => {
+// Auto refresh daily chart at midnight
+const setupDailyRefresh=()=>{
     const now = new Date();
-    const msUntilMidnight = (new Date(now.getFullYear(), now.getMonth(), now.getDate()+1)-now);
-    setTimeout(()=>{
-        if(unsubscribe) unsubscribe();
-        startRealtimeListener();
-        setupDailyRefresh();
-    }, msUntilMidnight+1000);
+    const msUntilMidnight = new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)-now;
+    setTimeout(()=>{ startRealtimeListener(); setupDailyRefresh(); }, msUntilMidnight+1000);
 };
+
+window.toggleView=(type)=>{
+    const fv=document.getElementById('form-view');
+    const pv=document.getElementById('progress-view');
+    const dailyC=document.getElementById('daily-chart-container');
+    const weeklyC=document.getElementById('weekly-chart-container');
+    const monthlyC=document.getElementById('monthly-chart-container');
+
+    fv.classList.add('hidden'); pv.classList.add('hidden');
+    dailyC.classList.add('hidden'); weeklyC.classList.add('hidden'); monthlyC.classList.add('hidden');
+
+    if(type==='log') fv.classList.remove('hidden');
+    if(type==='daily'){ pv.classList.remove('hidden'); dailyC.classList.remove('hidden'); }
+    if(type==='weekly'){ pv.classList.remove('hidden'); weeklyC.classList.remove('hidden'); }
+    if(type==='monthly'){ pv.classList.remove('hidden'); monthlyC.classList.remove('hidden'); }
+};
+
+onAuthStateChanged(auth,user=>{
+    if(user){ userId=user.uid; document.getElementById('user-id').textContent=userId; startRealtimeListener(); setupDailyRefresh(); }
+    else showMessage('Authentication failed','error');
+});
+
+signInAnonymously(auth);
 </script>
-
-<div id="message-box"></div>
-
-<div class="container card p-8 rounded-2xl shadow-2xl flex flex-col items-center space-y-8 border border-gray-700">
-    <h1 class="text-3xl sm:text-4xl font-bold text-center text-white">NEET PG Accountability</h1>
-    <p class="text-sm text-gray-400 text-center">User ID: <span id="user-id" class="font-mono text-xs text-gray-200">Initializing...</span></p>
-
-    <div class="flex flex-wrap justify-center gap-4 w-full">
-        <button id="log-btn" onclick="toggleView('log')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-blue-600 text-white">Log Study</button>
-        <button id="daily-progress-btn" onclick="toggleView('daily')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-gray-600 text-white">Daily</button>
-        <button id="weekly-progress-btn" onclick="toggleView('weekly')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-gray-600 text-white">Weekly</button>
-        <button id="monthly-progress-btn" onclick="toggleView('monthly')" class="flex-1 py-3 px-6 rounded-xl font-bold bg-gray-600 text-white">Monthly</button>
-    </div>
-
-    <div id="form-view" class="w-full space-y-6 mt-6">
-        <div><label class="text-gray-200 font-medium">Name:</label><input id="name-input" class="w-full p-3 rounded-lg border-2 border-gray-700 bg-gray-800 text-white"></div>
-        <div><label class="text-gray-200 font-medium">Hours Studied:</label><input id="hours-input" type="number" class="w-full p-3 rounded-lg border-2 border-gray-700 bg-gray-800 text-white"></div>
-        <div><label class="text-gray-200 font-medium">MCQs Solved:</label><input id="mcqs-input" type="number" class="w-full p-3 rounded-lg border-2 border-gray-700 bg-gray-800 text-white"></div>
-        <button onclick="logStudy()" class="w-full py-4 bg-blue-600 text-white font-bold rounded-xl">Submit</button>
-    </div>
-
-    <div id="progress-view" class="w-full hidden mt-6 space-y-6">
-        <div id="daily-chart-container" class="hidden"><h2 class="text-white text-2xl mb-2 text-center">Daily Progress</h2><div class="chart-container card p-4 rounded-xl shadow-inner"><canvas id="progressChartDaily"></canvas></div></div>
-        <div id="weekly-chart-container" class="hidden"><h2 class="text-white text-2xl mb-2 text-center">Weekly Progress</h2><div class="chart-container card p-4 rounded-xl shadow-inner"><canvas id="progressChartWeekly"></canvas></div></div>
-        <div id="monthly-chart-container" class="hidden"><h2 class="text-white text-2xl mb-2 text-center">Monthly Progress</h2><div class="chart-container card p-4 rounded-xl shadow-inner"><canvas id="progressChartMonthly"></canvas></div></div>
-    </div>
 </div>
 </body>
 </html>
