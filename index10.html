@@ -452,7 +452,7 @@
         const generateContent = async (prompt) => {
             const resultBox = document.getElementById('gemini-result-box');
             resultBox.textContent = 'Generating...';
-            const apiKey = ""; // leave blank or set your key
+            const apiKey = "AIzaSyBT8pI847BvkPnZP-W1Dcx-lSIhPdBco9E"; // leave blank or set your key
             if (!apiKey) { resultBox.textContent = 'API key not configured in this demo.'; return; }
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
             try {
